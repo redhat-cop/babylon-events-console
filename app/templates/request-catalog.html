@@ -1,0 +1,17 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+<h2>Catalog</h2>
+{%  for template in available_templates %}
+<div>
+<a href="/request?{{ template.metadata.namespace }}/{{ template.metadata.name }}">{{ template.metadata.name }}</a>
+</div>
+{%  endfor %}
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}

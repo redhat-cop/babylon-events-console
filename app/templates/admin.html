@@ -1,0 +1,21 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+<h1>Admin</h1>
+<p><a href="/admin/logout">logout</a></p>
+{%   for resource_claim in resource_claims %}
+<div class="container">
+<h2>{{ resource_claim.metadata.name }}</h2>
+<form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}">
+<button type="submit">Delete</button>
+</form>
+</div>
+{%   endfor %}
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}

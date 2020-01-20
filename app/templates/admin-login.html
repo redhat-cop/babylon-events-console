@@ -1,0 +1,16 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+<h2>Admin Login</h2>
+{{util.flashed_messages(dismissible=True)}}
+<form method="POST" action="/admin/login">
+Password: <input name="password" type="password">
+</form>
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}

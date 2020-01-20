@@ -1,0 +1,126 @@
+apiVersion: template.openshift.io/v1
+kind: Template
+metadata:
+  annotations:
+    description: babylon events console
+  name: babylon-events-console
+
+parameters:
+- name: NAME
+  displayName: Name to apply to template resources
+  value: babylon-events-console
+  required: true
+- name: ADMIN_PASSWORD
+  displayName: Administrative Password
+  generate: expression
+  from: '[a-zA-Z0-9]{16}'
+  required: true
+- name: DATABASE_SERVICE_NAME
+  value: babylon-events-console-redis
+- name: HOSTNAME
+- name: IMAGE
+  value: quay.io/redhat-cop/babylon-events-console:latest
+- name: IMAGE_PULL_POLICY
+  value: IfNotPresent
+- name: POOLBOY_DOMAIN
+  value: poolboy.gpte.redhat.com
+
+objects:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: ${NAME}
+
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    name: ${NAME}
+  rules:
+  - apiGroups:
+    - template.openshift.io
+    resources:
+    - templates
+    verbs:
+    - get
+    - list
+    - watch
+  - apiGroups:
+    - ${POOLBOY_DOMAIN}
+    resources:
+    - resourceclaims
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - watch
+    - update
+
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    name: ${NAME}
+  roleRef:
+    apiGroup: rbac.authorization.k8s.io
+    kind: Role
+    name: ${NAME}
+  subjects:
+  - kind: ServiceAccount
+    name: ${NAME}
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}
+  spec:
+    selector:
+      matchLabels:
+        app: ${NAME}
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+      spec:
+        serviceAccountName: ${NAME}
+        containers:
+        - name: babylon-events-console
+          env:
+          - name: ADMIN_PASSWORD
+            value: ${ADMIN_PASSWORD}
+          - name: REDIS_SERVER
+            value: ${DATABASE_SERVICE_NAME}:6379
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ${DATABASE_SERVICE_NAME}
+                key: database-password
+          image: ${IMAGE}
+          ports:
+          - containerPort: 8080
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}
+  spec:
+    ports:
+    - port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: ${NAME}
+    type: ClusterIP
+
+- apiVersion: route.openshift.io/v1
+  kind: Route
+  metadata:
+    name: ${NAME}
+  spec:
+    host: ${HOSTNAME}
+    port:
+      targetPort: 8080
+    to:
+      kind: Service
+      name: ${NAME}

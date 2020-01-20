@@ -1,0 +1,43 @@
+{% extends "bootstrap/base.html" %}
+{% import "bootstrap/fixes.html" as fixes %}
+{% import "bootstrap/utils.html" as util %}
+
+{% block content %}
+<p><a href="/admin">admin</a></p>
+
+{{util.flashed_messages(dismissible=True)}}
+
+<div>
+<form method="GET" action="/request">
+<button type="submit">Request Environment</button>
+</form>
+</div>
+
+{%   for resource_claim in resource_claims %}
+<div class="container">
+<h2>{{ resource_claim.metadata.name }}</h2>
+{%     for resource in resource_claim.spec.resources %}
+{%       set resource_claim_status = resource_claim.status | default({}) %}
+{%       set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
+{%       set resource_status = resource_claim_status_resources[loop.index0] | default({}) %}
+{%       set resource_state = resource_status.state | default({}) %}
+{%       set resource_state_spec = resource_state.spec | default({}) %}
+{%       set status_vars = resource_state_spec.vars | default({}) %}
+{%       set status_job_vars = status_vars.job_vars | default({}) %}
+{%       set template_vars = resource.template.spec.vars | default({}) %}
+<p>GUID: {{ status_job_vars.guid | default('UNKNOWN') }}</p>
+<p>Desired state: {{ template_vars.desired_state | default('UNKNOWN') }}</p>
+<p>Current state: {{ status_vars.current_state | default('UNKNOWN') }}</p>
+{%     endfor %}
+<form method="POST" action="/delete/{{ resource_claim.metadata.name }}">
+<button type="submit">Delete</button>
+</form>
+</div>
+{%   endfor %}
+<p>{{ session_id }}</p>
+{% endblock %}
+
+{% block head %}
+{{super()}}
+{{fixes.ie8()}}
+{% endblock %}

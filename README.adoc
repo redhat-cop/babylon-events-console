@@ -1,0 +1,41 @@
+
+. Deploy Redis
+----
+oc process openshift//redis-persistent \
+  -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
+| oc create -f -
+----
+
+. Deploy events console
++
+----
+oc process --local \
+  -f deploy-template.yaml \
+  -p NAME="babylon-events-console" \
+  -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
+  -p ADMIN_PASSWORD="MySecret" \
+| oc apply -f -
+----
+
+. Create events console build configuration
+----
+oc process --local -f build-template.yaml | oc apply -f -
+----
+
+. Build events console image
+----
+oc start-build babylon-events-console --from-dir=. -F
+----
+
+. Deploy events console from build image
++
+----
+IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
+oc process --local \
+  -f deploy-template.yaml \
+  -p NAME="babylon-events-console" \
+  -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
+  -p ADMIN_PASSWORD="MySecret" \
+  -p IMAGE="${IMAGE}" \
+| oc apply -f -
+----

@@ -1,0 +1,12 @@
+flask
+flask-Bootstrap
+flask-redis
+flask-session
+flask-WTF
+inflection
+Jinja2
+kubernetes
+redis
+requests
+Werkzeug
+WTForms
