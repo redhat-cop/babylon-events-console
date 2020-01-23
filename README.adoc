@@ -1,41 +1,57 @@
+# Babylon Events Console
+
+This project provides a simple interface for running a lab environments on babylon for events where users are not expected to have authentication credentials.
+The console can be configured to automatically provision a lab unique environment to each user that connects to the console interface.
+
+## Deploying the Events Console
 
 . Deploy Redis
-----
++
+The Redis database is use to store use session data.
++
+------------------------------------------------------------
 oc process openshift//redis-persistent \
   -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
 | oc create -f -
-----
-
-. Deploy events console
-+
-----
-oc process --local \
-  -f deploy-template.yaml \
-  -p NAME="babylon-events-console" \
-  -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
-  -p ADMIN_PASSWORD="MySecret" \
-| oc apply -f -
-----
+------------------------------------------------------------
 
 . Create events console build configuration
-----
++
+------------------------------------------------------------
 oc process --local -f build-template.yaml | oc apply -f -
-----
+------------------------------------------------------------
 
 . Build events console image
-----
-oc start-build babylon-events-console --from-dir=. -F
-----
-
-. Deploy events console from build image
 +
-----
+------------------------------------------------------------
+oc start-build babylon-events-console --from-dir=. -F
+------------------------------------------------------------
+
+. Deploy events console from build image.
++
+The provided OpenShift deploy template provides the parameters `ADMIN_PASSWORD` for configuring the administrative password and `AUTOPROVISION` to allow you to specify which template should be used to automatically provision lab environments for lab participants.
+`AUTOPROVISION` should be set with `<TEMPLATE_NAMESPACE>/<TEMPLATE_NAME>`.
++
+--------------------------------------------------------------------------------
+TEMPLATE_NAME=...
+TEMPLATE_NAMESPACE=...
 IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
 oc process --local \
   -f deploy-template.yaml \
   -p NAME="babylon-events-console" \
   -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
   -p ADMIN_PASSWORD="MySecret" \
+  -p AUTOPROVISION="${TEMPLATE_NAMESPACE}/${TEMPLATE_NAME}" \
   -p IMAGE="${IMAGE}" \
 | oc apply -f -
-----
+--------------------------------------------------------------------------------
+
+. Get the route hostname, then visit the page.
+The same hostname should be provided to each student.
++
+------------------------------------------------------------------------
+oc get route babylon-events-console -o custom-columns=HOST:{.spec.host}
+------------------------------------------------------------------------
++
+Since the console has no authentication protection, you should keep the hostname secret until it is time for the start of the lab.
+A separate lab console in a separate namespace should be used for each lab session.

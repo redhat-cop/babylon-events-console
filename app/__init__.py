@@ -26,6 +26,9 @@ def random_string(length):
 admin_password = os.getenv('ADMIN_PASSWORD', random_string(32))
 poolboy_domain = os.getenv('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
 poolboy_version = os.getenv('POOLBOY_VERSION', 'v1')
+autoprovision = os.getenv('AUTOPROVISION', '').lower() == 'true'
+if autoprovision and '/' not in autoprovision:
+    autoprovision = '{0}/{1}'.format(console_namespace, autoprovision)
 
 template_namespaces = os.getenv('TEMPLATE_NAMESPACES', None)
 if template_namespaces:
@@ -163,7 +166,9 @@ def handle_instantiate_template(template, parameters):
 def index():
     session_id = get_session_id()
     resource_claims = get_resource_claims(session_id)
-    return render_template('index.html', resource_claims=resource_claims, session_id=session_id)
+    if autoprovision and not resource_claims:
+        return redirect(url_for('_request'))
+    return render_template('index.html', autoprovision=autoprovision, resource_claims=resource_claims, session_id=session_id)
 
 @app.route('/admin', methods=['GET'])
 def admin():
@@ -188,8 +193,8 @@ def admin_logout():
     return redirect(url_for('index'))
 
 @app.route('/request', methods=['GET'])
-def get_request():
-    selected_template = request.args.get('template')
+def _request():
+    selected_template = request.args.get('template', autoprovision)
     if selected_template:
         template_namespace, template_name = selected_template.split('/')
         template = get_template(template_namespace, template_name)

@@ -1,17 +1,19 @@
-{% extends "bootstrap/base.html" %}
-{% import "bootstrap/fixes.html" as fixes %}
 {% import "bootstrap/utils.html" as util %}
 
+{% include "header.html" %}
+
 {% block content %}
-<p><a href="/admin">admin</a></p>
+{% include "topnav.html" %}
 
 {{util.flashed_messages(dismissible=True)}}
 
+{% if not autoprovision %}
 <div>
 <form method="GET" action="/request">
 <button type="submit">Request Environment</button>
 </form>
 </div>
+{% endif %}
 
 {%   for resource_claim in resource_claims %}
 <div class="container">
@@ -30,14 +32,9 @@
 <p>Current state: {{ status_vars.current_state | default('UNKNOWN') }}</p>
 {%     endfor %}
 <form method="POST" action="/delete/{{ resource_claim.metadata.name }}">
-<button type="submit">Delete</button>
+<button type="submit">{{ 'Reset' if autoprovision else 'Delete' }}</button>
 </form>
 </div>
 {%   endfor %}
 <p>{{ session_id }}</p>
-{% endblock %}
-
-{% block head %}
-{{super()}}
-{{fixes.ie8()}}
 {% endblock %}

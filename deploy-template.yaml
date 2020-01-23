@@ -15,6 +15,9 @@ parameters:
   generate: expression
   from: '[a-zA-Z0-9]{16}'
   required: true
+- name: AUTOPROVISION
+  displayName: Autoprovision
+  value: ''
 - name: DATABASE_SERVICE_NAME
   value: babylon-events-console-redis
 - name: HOSTNAME
@@ -89,6 +92,8 @@ objects:
           env:
           - name: ADMIN_PASSWORD
             value: ${ADMIN_PASSWORD}
+          - name: AUTOPROVISION
+            value: ${AUTOPROVISION}
           - name: REDIS_SERVER
             value: ${DATABASE_SERVICE_NAME}:6379
           - name: REDIS_PASSWORD
