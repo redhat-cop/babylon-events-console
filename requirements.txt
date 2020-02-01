@@ -6,6 +6,7 @@ flask-WTF
 inflection
 Jinja2
 kubernetes
+PyYaml
 redis
 requests
 Werkzeug

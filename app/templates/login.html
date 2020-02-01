@@ -5,11 +5,11 @@
 {% block content %}
 {% include "topnav.html" %}
 
-<h1>Admin Login</h1>
+<h1>Login</h1>
 {%   if login_failed | default(False) %}
 <p>Login failed!</p>
 {%   endif %}
-<form method="POST" action="/admin/login">
+<form method="POST" action="/login">
 Password: <input name="password" type="password">
 </form>
 {% endblock %}

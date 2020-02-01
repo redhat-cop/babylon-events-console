@@ -1,10 +1,14 @@
-{% extends "bootstrap/base.html" %}
-{% import "bootstrap/fixes.html" as fixes %}
 {% import "bootstrap/utils.html" as util %}
 
+{% include "header.html" %}
+
 {% block content %}
-<h1>Admin</h1>
+{% include "topnav.html" %}
 <p><a href="/admin/logout">logout</a></p>
+
+<h1>Admin</h1>
+{{util.flashed_messages(dismissible=True)}}
+
 {%   for resource_claim in resource_claims %}
 <div class="container">
 <h2>{{ resource_claim.metadata.name }}</h2>
@@ -13,9 +17,4 @@
 </form>
 </div>
 {%   endfor %}
-{% endblock %}
-
-{% block head %}
-{{super()}}
-{{fixes.ie8()}}
 {% endblock %}
