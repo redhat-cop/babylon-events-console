@@ -65,7 +65,7 @@ def create_resource(resource_definition):
         namespace = resource_definition['metadata'].get('namespace', console_namespace)
         plural, namespaced = get_api(group, version, resource_definition['kind'])
         if namespaced:
-            custom_objects_api.create_namespaced_custom_object(
+            return custom_objects_api.create_namespaced_custom_object(
                 group, version, namespace, plural, resource_definition
             )
         else:
@@ -79,7 +79,7 @@ def create_resource(resource_definition):
         create_cluster_method = 'create_' + inflection.underscore(kind)
         if hasattr(core_v1_api, create_namespaced_method):
             method = getattr(core_v1_api, create_namespaced_method)
-            method(namespace, resource_definition).to_dict()
+            return method(namespace, resource_definition).to_dict()
         else:
             method = getattr(core_v1_api, create_cluster_method)
             return method(resource_definition).to_dict()
