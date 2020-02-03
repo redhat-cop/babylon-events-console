@@ -3,22 +3,22 @@ kind: Template
 metadata:
   annotations:
     description: babylon events console
+    openshift.io/display-name: Babylon Events Console
+    openshift.io/documentation-url: https://github.com/redhat-cop/babylon-events-console/
+    openshift.io/long-description: >-
+      Deploy the Babylon Events Console
+      data is stored on persistent storage.
   name: babylon-events-console
+
+message: |-
+  The Babylon events console URL may be found in the ${NAME} route resourec.
+  Access Password: ${ACCESS_PASSWORD}
+  Admin Password:  ${ADMIN_PASSWORD}
 
 parameters:
 - name: NAME
   displayName: Name to apply to template resources
   value: babylon-events-console
-  required: true
-- name: ACCESS_PASSWORD
-  displayName: User Access Password
-  description: >-
-    Optional user access password
-  generate: expression
-- name: ADMIN_PASSWORD
-  displayName: Administrative Password
-  generate: expression
-  from: '[a-zA-Z0-9]{16}'
   required: true
 - name: TEMPLATE
   displayName: Template
@@ -33,26 +33,71 @@ parameters:
     Provide parameters as a JSON or YAML dictionary.
   value: '{}'
   required: true
-- name: DATABASE_SERVICE_NAME
-  displayName: Redis database service name
+- name: ACCESS_PASSWORD
+  displayName: User Access Password
   description: >-
-    Redis database service name for session data.
-    Redis must be deployed in same namespace as the events console.
-  value: babylon-events-console-redis
+    Optional user access password
+  from: '[a-zA-Z0-9]{8}'
+  generate: expression
+- name: ADMIN_PASSWORD
+  displayName: Administrative Password
+  generate: expression
+  from: '[a-zA-Z0-9]{8}'
   required: true
 - name: HOSTNAME
   displayName: Route Hostname
   description: >-
     Hostname for events console route.
   required: false
-- name: IMAGE
+- name: CONSOLE_IMAGE
   displayName: Babylon events console image
   value: quay.io/redhat-cop/babylon-events-console:latest
   required: true
+- name: CONSOLE_CPU_LIMIT
+  displayName: Redis CPU Limit
+  description: >-
+    Redis container cpu limit.
+  required: true
+  value: 500m
+- name: CONSOLE_MEMORY_LIMIT
+  displayName: Redis Memory Limit
+  description: >-
+    Redis container memory limit.
+  required: true
+  value: 512Mi
 - name: POOLBOY_DOMAIN
   displayName: Poolboy operator CRD domain
   value: poolboy.gpte.redhat.com
   required: true
+- name: REDIS_IMAGE
+  displayName: Redis Image
+  value: registry.redhat.io/rhscl/redis-32-rhel7:latest
+  required: true
+- name: REDIS_PASSWORD
+  displayName: Redis Database Password
+  description: >-
+    Password for the Redis database.
+  from: '[a-zA-Z0-9]{16}'
+  generate: expression
+  required: true
+- name: REDIS_CPU_LIMIT
+  displayName: Redis CPU Limit
+  description: >-
+    Redis container cpu limit.
+  required: true
+  value: 500m
+- name: REDIS_MEMORY_LIMIT
+  displayName: Redis Memory Limit
+  description: >-
+    Redis container memory limit.
+  required: true
+  value: 512Mi
+- name: REDIS_VOLUME_CAPACITY
+  displayName: Redis Volume Capacity
+  description: >-
+    Volume space available for session data, e.g. 512Mi, 2Gi.
+  required: true
+  value: 1Gi
 
 objects:
 - apiVersion: v1
@@ -102,9 +147,25 @@ objects:
   kind: Secret
   metadata:
     name: ${NAME}
+    annotations:
+      template.openshift.io/expose-access_password: "{.data['access_password']}"
+      template.openshift.io/expose-admin_password: "{.data['admin_password']}"
+      template.openshift.io/expose-redis_password: "{.data['redis_password']}"
   stringData:
     access_password: ${ACCESS_PASSWORD}
     admin_password: ${ADMIN_PASSWORD}
+    redis_password: ${REDIS_PASSWORD}
+
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    name: ${NAME}-redis
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: ${REDIS_VOLUME_CAPACITY}
 
 - apiVersion: apps/v1
   kind: Deployment
@@ -114,11 +175,13 @@ objects:
     selector:
       matchLabels:
         app: ${NAME}
+        component: console
     replicas: 1
     template:
       metadata:
         labels:
           app: ${NAME}
+          component: console
       spec:
         serviceAccountName: ${NAME}
         containers:
@@ -139,17 +202,78 @@ objects:
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
-                name: ${DATABASE_SERVICE_NAME}
-                key: database-password
+                name: ${NAME}
+                key: redis_password
           - name: REDIS_SERVER
-            value: ${DATABASE_SERVICE_NAME}:6379
+            value: ${NAME}-redis:6379
           - name: TEMPLATE
             value: ${TEMPLATE}
           - name: TEMPLATE_PARAMETERS
             value: ${TEMPLATE_PARAMETERS}
-          image: ${IMAGE}
+          image: ${CONSOLE_IMAGE}
           ports:
           - containerPort: 8080
+          resources:
+            limits:
+              cpu: ${CONSOLE_CPU_LIMIT}
+              memory: ${CONSOLE_MEMORY_LIMIT}
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}-redis
+  spec:
+    replicas: 1
+    selector:
+      matchLabels:
+        app: ${NAME}
+        component: redis
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          component: redis
+      spec:
+        containers:
+        - name: redis
+          env:
+          - name: REDIS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: redis_password
+                name: ${NAME}
+          image: ${REDIS_IMAGE}
+          imagePullPolicy: Always
+          livenessProbe:
+            initialDelaySeconds: 30
+            tcpSocket:
+              port: 6379
+            timeoutSeconds: 1
+          ports:
+          - containerPort: 6379
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - -i
+              - -c
+              - test "$(redis-cli -h 127.0.0.1 -a $REDIS_PASSWORD ping)" == "PONG"
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: ${REDIS_CPU_LIMIT}
+              memory: ${REDIS_MEMORY_LIMIT}
+          volumeMounts:
+          - mountPath: /var/lib/redis/data
+            name: data
+        volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: ${NAME}-redis
 
 - apiVersion: v1
   kind: Service
@@ -157,11 +281,28 @@ objects:
     name: ${NAME}
   spec:
     ports:
-    - port: 8080
+    - name: app
+      port: 8080
       protocol: TCP
       targetPort: 8080
     selector:
       app: ${NAME}
+      component: console
+    type: ClusterIP
+
+- apiVersion: v1
+  kind: Service
+  metadata:
+    name: ${NAME}-redis
+  spec:
+    ports:
+    - name: redis
+      port: 6379
+      protocol: TCP
+      targetPort: 6379
+    selector:
+      app: ${NAME}
+      component: redis
     type: ClusterIP
 
 - apiVersion: route.openshift.io/v1

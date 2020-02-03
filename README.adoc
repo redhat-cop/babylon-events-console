@@ -35,14 +35,15 @@ The provided OpenShift deploy template provides the parameters `ADMIN_PASSWORD` 
 --------------------------------------------------------------------------------
 TEMPLATE_NAME=...
 TEMPLATE_NAMESPACE=...
-IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
+CONSOLE_IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
 oc process --local \
   -f deploy-template.yaml \
   -p NAME="babylon-events-console" \
-  -p DATABASE_SERVICE_NAME="babylon-events-console-redis" \
-  -p ADMIN_PASSWORD="MySecret" \
-  -p AUTOPROVISION="${TEMPLATE_NAMESPACE}/${TEMPLATE_NAME}" \
-  -p IMAGE="${IMAGE}" \
+  -p ACCESS_PASSWORD="MySecret" \
+  -p ADMIN_PASSWORD="AdminSecret" \
+  -p REDIS_PASSWORD="RedisSecret" \
+  -p TEMPLATE="${TEMPLATE_NAMESPACE}//${TEMPLATE_NAME}" \
+  -p CONSOLE_IMAGE="${CONSOLE_IMAGE}" \
 | oc apply -f -
 --------------------------------------------------------------------------------
 

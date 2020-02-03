@@ -13,6 +13,7 @@ from kubernetes.client.rest import ApiException
 from flask import Flask, render_template, flash, redirect, url_for, request, session
 from flask_session import Session
 from flask_bootstrap import Bootstrap
+from werkzeug.contrib.fixers import ProxyFix
 
 if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/namespace"):
     console_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
@@ -38,6 +39,8 @@ if template_env == '':
     raise Exception('TEMPLATE environment variable not set!')
 elif '//' in template_env:
     template_namespace, template_name = template_env.split('//')
+elif '/' in template_env:
+    template_namespace, template_name = template_env.split('/')
 else:
     template_name = template_env
     template_namespace = console_namespace
@@ -45,6 +48,7 @@ else:
 template_parameters = yaml.safe_load(os.getenv('TEMPLATE_PARAMETERS', '{}'))
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app)
 bootstrap = Bootstrap(app)
 
 SECRET_KEY = random_string(32)
@@ -141,9 +145,9 @@ def provision_for_session(session_id):
 
 def substitute_template_parameters(value, parameters):
     if isinstance(value, dict):
-        return { k:substitute_parameters(v, parameters) for k, v in value.items() }
+        return { k:substitute_template_parameters(v, parameters) for k, v in value.items() }
     elif isinstance(value, list):
-        return [ substitute_parameters(item, parameters) for item in value ]
+        return [ substitute_template_parameters(item, parameters) for item in value ]
     elif isinstance(value, str):
         for k, v in parameters.items():
             value = value.replace('${' + k + '}', v)
