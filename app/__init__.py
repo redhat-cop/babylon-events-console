@@ -25,7 +25,7 @@ else:
 def random_string(length):
     return ''.join([random.choice(string.ascii_letters + string.digits) for n in range(length)])
 
-access_password = os.getenv('ACCESS_PASSWORD', random_string(32))
+access_password = os.getenv('ACCESS_PASSWORD', '')
 admin_password = os.getenv('ADMIN_PASSWORD', random_string(32))
 poolboy_domain = os.getenv('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
 poolboy_version = os.getenv('POOLBOY_VERSION', 'v1')

@@ -12,8 +12,8 @@ metadata:
 
 message: |-
   The Babylon events console URL may be found in the ${NAME} route resourec.
-  Access Password: ${ACCESS_PASSWORD}
   Admin Password:  ${ADMIN_PASSWORD}
+  Access Password: ${ACCESS_PASSWORD}
 
 parameters:
 - name: NAME
@@ -23,8 +23,8 @@ parameters:
 - name: TEMPLATE
   displayName: Template
   description: >-
-    Template to provision for users.
-    Template may be given as the template name or "<namespace>//<name>".
+    Babylon AgnosticV catalog item template to provision for users.
+    Template must be given as the template name or "<NAMESPACE>//<NAME>".
   required: true
 - name: TEMPLATE_PARAMETERS
   displayName: Template parameters
@@ -37,8 +37,6 @@ parameters:
   displayName: User Access Password
   description: >-
     Optional user access password
-  from: '[a-zA-Z0-9]{8}'
-  generate: expression
 - name: ADMIN_PASSWORD
   displayName: Administrative Password
   generate: expression
