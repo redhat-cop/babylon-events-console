@@ -51,6 +51,9 @@ parameters:
   displayName: Babylon events console image
   value: quay.io/redhat-cop/babylon-events-console:latest
   required: true
+- name: CONSOLE_IMAGE_PULL_POLICY
+  value: Always
+  required: true
 - name: CONSOLE_CPU_LIMIT
   displayName: Redis CPU Limit
   description: >-
@@ -209,6 +212,7 @@ objects:
           - name: TEMPLATE_PARAMETERS
             value: ${TEMPLATE_PARAMETERS}
           image: ${CONSOLE_IMAGE}
+          imagePullPolicy: ${CONSOLE_IMAGE_PULL_POLICY}
           ports:
           - containerPort: 8080
           resources:

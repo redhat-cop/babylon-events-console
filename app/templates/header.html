@@ -4,6 +4,9 @@
 {% block title %}Babylon Events Console{% endblock %}
 
 {% block head %}
+{%   if meta_refresh | default(0) > 0 %}
+<meta http-equiv="refresh" content="{{ meta_refresh }}">
+{%   endif %}
 {{super()}}
 {{fixes.ie8()}}
 {% endblock %}

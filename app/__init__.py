@@ -140,7 +140,7 @@ def provision_for_session(session_id):
         resource = create_resource(resource_definition)
         if resource['apiVersion'] == poolboy_api_version \
         and resource['kind'] == 'ResourceClaim':
-            resource_claims.append([])
+            resource_claims.append(resource)
     return resource_claims
 
 def substitute_template_parameters(value, parameters):
@@ -173,10 +173,12 @@ def index():
 
     # Get lab environment settings
     resource_claims = get_resource_claims(session_id)
+    meta_refresh = 30
     if not resource_claims:
+        meta_refresh = 2
         resource_claims = provision_for_session(session_id)
 
-    return render_template('index.html', resource_claims=resource_claims, session_id=session_id)
+    return render_template('index.html', resource_claims=resource_claims, session_id=session_id, meta_refresh=meta_refresh)
 
 @app.route('/admin', methods=['GET'])
 def admin():
