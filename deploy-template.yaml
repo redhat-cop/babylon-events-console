@@ -20,11 +20,16 @@ parameters:
   displayName: Name to apply to template resources
   value: babylon-events-console
   required: true
-- name: TEMPLATE
+- name: TEMPLATE_NAME
   displayName: Template
   description: >-
-    Babylon AgnosticV catalog item template to provision for users.
-    Template must be given as the template name or "<NAMESPACE>//<NAME>".
+    Babylon AgnosticV catalog item template name to provision for users.
+  required: true
+- name: TEMPLATE_NAMESPACE
+  displayName: Template
+  description: >-
+    Babylon AgnosticV catalog item template namespace.
+  value: openshift
   required: true
 - name: TEMPLATE_PARAMETERS
   displayName: Template parameters
@@ -207,8 +212,10 @@ objects:
                 key: redis_password
           - name: REDIS_SERVER
             value: ${NAME}-redis:6379
-          - name: TEMPLATE
-            value: ${TEMPLATE}
+          - name: TEMPLATE_NAME
+            value: ${TEMPLATE_NAME}
+          - name: TEMPLATE_NAMESPACE
+            value: ${TEMPLATE_NAMESPACE}
           - name: TEMPLATE_PARAMETERS
             value: ${TEMPLATE_PARAMETERS}
           image: ${CONSOLE_IMAGE}

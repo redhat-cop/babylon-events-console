@@ -13,7 +13,6 @@
 {%     set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
 {%     set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
 {%     set resource_claim_description = resource_claim_annotations.description | default('') %}
-
 {%     set resource_claim_status = resource_claim.status | default({}) %}
 {%     set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
 <h2>{{ resource_claim_display_name }}</h2>

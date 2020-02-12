@@ -9,11 +9,13 @@ import string
 import time
 import kubernetes
 import yaml
+from base64 import b32encode, b32decode
 from kubernetes.client.rest import ApiException
 from flask import Flask, render_template, flash, redirect, url_for, request, session
 from flask_session import Session
 from flask_bootstrap import Bootstrap
-from werkzeug.contrib.fixers import ProxyFix
+from werkzeug.middleware.proxy_fix import ProxyFix
+
 
 if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/namespace"):
     console_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
@@ -34,21 +36,15 @@ poolboy_api_version = poolboy_domain + '/' + poolboy_version
 core_v1_api = kubernetes.client.CoreV1Api()
 custom_objects_api = kubernetes.client.CustomObjectsApi()
 
-template_env = os.getenv('TEMPLATE', '')
-if template_env == '':
-    raise Exception('TEMPLATE environment variable not set!')
-elif '//' in template_env:
-    template_namespace, template_name = template_env.split('//')
-elif '/' in template_env:
-    template_namespace, template_name = template_env.split('/')
-else:
-    template_name = template_env
-    template_namespace = console_namespace
-
+template_name = os.getenv('TEMPLATE_NAME', '')
+if template_name == '':
+    raise Exception('TEMPLATE_NAME environment variable not set!')
+template_namespace = os.getenv('TEMPLATE_NAMESPACE', 'openshift')
 template_parameters = yaml.safe_load(os.getenv('TEMPLATE_PARAMETERS', '{}'))
 
 app = Flask(__name__)
-app.wsgi_app = ProxyFix(app.wsgi_app)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+
 bootstrap = Bootstrap(app)
 
 SECRET_KEY = random_string(32)
@@ -58,6 +54,13 @@ app.config.from_object(__name__)
 Session(app)
 
 api_groups = {}
+
+def encode_session_id(session_id):
+    return b32encode(session_id.encode('utf-8')).decode('ascii').replace('=','z')
+
+@app.template_filter()
+def decode_session_id(session_id):
+    return b32decode(session_id.replace('z','=')).decode('utf-8')
 
 def create_resource(resource_definition):
     if '/' in resource_definition['apiVersion']:
@@ -106,10 +109,15 @@ def get_api(group, version, kind):
     raise Exception('Unable to find kind {} in {}/{}', kind, group, version)
 
 def get_resource_claims(session_id=None):
-    if session_id:
+    if session_id == 'unowned':
         return custom_objects_api.list_namespaced_custom_object(
             poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
-            label_selector='session-id=' + session_id
+            label_selector='!session-id'
+        ).get('items', [])
+    elif session_id:
+        return custom_objects_api.list_namespaced_custom_object(
+            poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
+            label_selector='session-id=' + encode_session_id(session_id)
         ).get('items', [])
     else:
         return custom_objects_api.list_namespaced_custom_object(
@@ -123,7 +131,34 @@ def get_session_id():
         session['id'] = session_id
     return session_id
 
-def provision_for_session(session_id):
+def assign_unowned_claim(session_id):
+    '''
+    Assigned an unowned resource claim to this session.
+    '''
+    resource_claims = get_resource_claims('unowned')
+    for resource_claim in resource_claims:
+        claim_resources = resource_claim.get('status',{}).get('resources', None)
+        if not claim_resources:
+            continue
+        subject_vars = claim_resources[0].get('state', {}).get('spec', {}).get('vars', {})
+        if subject_vars.get('current_state') != 'started':
+            continue
+        try:
+            if 'labels' not in resource_claim['metadata']:
+                resource_claim['metadata']['labels'] = {}
+            resource_claim['metadata']['labels']['session-id'] = encode_session_id(session_id)
+            return custom_objects_api.replace_namespaced_custom_object(
+                poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
+                resource_claim['metadata']['name'], resource_claim
+            )
+        except ApiException as e:
+            # 409 means the resource changed, most likely because another user claimed it first
+            if e.status != 409:
+                raise
+
+    return None
+
+def provision_from_template(session_id=None):
     template = custom_objects_api.get_namespaced_custom_object(
         'template.openshift.io', 'v1', template_namespace, 'templates', template_name
     )
@@ -136,7 +171,8 @@ def provision_for_session(session_id):
         resource_definition['metadata']['annotations']['template.openshift.io/namespace'] = template['metadata']['namespace']
         if 'labels' not in resource_definition['metadata']:
             resource_definition['metadata']['labels'] = {}
-        resource_definition['metadata']['labels']['session-id'] = get_session_id()
+        if session_id:
+            resource_definition['metadata']['labels']['session-id'] = encode_session_id(session_id)
         resource = create_resource(resource_definition)
         if resource['apiVersion'] == poolboy_api_version \
         and resource['kind'] == 'ResourceClaim':
@@ -161,22 +197,27 @@ def index():
     if access_password \
     and not session.get('access_authenticated') \
     and not session.get('admin_authenticated'):
-        return render_template('login.html')
+        return render_template('login.html', password_required=(access_password != ''))
 
     # Session initialization
     session_id = request.args.get('session_id')
     if not session_id:
         session_id = session.get('id', None)
-        if not session_id:
-            session_id = session['id'] = random_string(32)
-        return redirect(url_for('index', session_id=session_id))
+        if session_id:
+            return redirect(url_for('index', session_id=session_id))
+        else:
+            return render_template('login.html', password_required=(access_password != ''))
 
     # Get lab environment settings
     resource_claims = get_resource_claims(session_id)
     meta_refresh = 30
     if not resource_claims:
         meta_refresh = 2
-        resource_claims = provision_for_session(session_id)
+        resource_claim = assign_unowned_claim(session_id)
+        if resource_claim:
+            resource_claims = [resource_claim]
+        else:
+            resource_claims = provision_from_template(session_id)
 
     return render_template('index.html', resource_claims=resource_claims, session_id=session_id, meta_refresh=meta_refresh)
 
@@ -187,6 +228,18 @@ def admin():
 
     resource_claims = get_resource_claims()
     return render_template('admin.html', resource_claims=resource_claims)
+
+@app.route('/admin/create', methods=['POST'])
+def admin_create():
+    if not session.get('admin_authenticated'):
+        return render_template('admin-login.html')
+
+    number = int(request.form.get('number', 1))
+    for i in range(number):
+        provision_from_template()
+
+    flash('{0} environment{1} created'.format(number, 's' if number > 1 else ''))
+    return redirect(url_for('admin'))
 
 @app.route('/admin/delete/<claim_name>', methods=['POST'])
 def admin_delete_resource_claim(claim_name):
@@ -220,11 +273,19 @@ def admin_logout():
 
 @app.route('/login', methods=['POST'])
 def login():
-    password = request.form.get('password')
-    if password == access_password:
-        session['access_authenticated'] = True
-        return redirect(url_for('index'))
-    return render_template('login.html', login_failed=True)
+    session_id = request.form.get('id')
+
+    if len(session_id) < 6:
+        return render_template('login.html', session_id=session_id, invalid_session_id=True)
+
+    if access_password:
+        if access_password == request.form.get('password'):
+            session['access_authenticated'] = True
+        else:
+            return render_template('login.html', login_failed=True)
+
+    session['id'] = session.get('id', session_id)
+    return redirect(url_for('index', session_id=session_id))
 
 @app.route('/logout', methods=['POST'])
 def logout():

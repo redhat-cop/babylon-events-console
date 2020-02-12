@@ -4,17 +4,58 @@
 
 {% block content %}
 {% include "topnav.html" %}
-<p><a href="/admin/logout">logout</a></p>
+<div class="container">
 
 <h1>Admin</h1>
+<p><a href="/admin/logout">logout</a></p>
 {{util.flashed_messages(dismissible=True)}}
 
+<table>
+<tr>
+<th></th>
+<th style="padding: 1pt 5pt">Claim</th>
+<th style="padding: 1pt 5pt">GUID</th>
+<th style="padding: 1pt 5pt">User</th>
+<th style="padding: 1pt 5pt">State</th>
+<th style="padding: 1pt 0">Action</th>
+</tr>
 {%   for resource_claim in resource_claims %}
-<div class="container">
-<h2>{{ resource_claim.metadata.name }}</h2>
+{#     So many variables... all to protect jinja evaluation from undefined dictionary keys #}
+{%     set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
+{%     set resource_claim_labels = resource_claim.metadata.labels | default({}) %}
+{%     set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
+{%     set resource_claim_session_id = resource_claim_labels['session-id'] | default('unowned') %}
+{%     set resource_claim_status = resource_claim.status | default({}) %}
+{%     set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
+{%     set resource_status = resource_claim_status_resources[0] | default({}) %}
+{%     set resource_state = resource_status.state | default({}) %}
+{%     set resource_state_spec = resource_state.spec | default({}) %}
+{%     set status_vars = resource_state_spec.vars | default({}) %}
+{%     set status_job_vars = status_vars.job_vars | default({}) %}
+{%     set guid = status_job_vars.guid | default('UNKNOWN') %}
+<tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
+<td style="padding: 1pt 5pt">{{ loop.index }}</td>
+<td style="padding: 1pt 5pt">{{ resource_claim_display_name }}</td>
+<td style="padding: 1pt 5pt">{{ guid }}</td>
+{% if resource_claim_session_id == 'unowned' %}
+<td style="padding: 1pt 5pt">unowned</td>
+{% else %}
+<td style="padding: 1pt 5pt">{{ resource_claim_session_id | decode_session_id }}</td>
+{% endif %}
+<td style="padding: 1pt 5pt">{{ status_vars.current_state | default('UNKNOWN') }}</td>
+<td style="padding: 0">
 <form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}">
 <button type="submit">Delete</button>
 </form>
-</div>
+</td>
+</tr>
 {%   endfor %}
+</table>
+
+<h2>Create Lab Environments</h2>
+<form method="POST" action="/admin/create">
+Number <input type="number" name="number" min="1" max="500" value="1">
+<button type="submit">Create</button>
+</form>
+</div>
 {% endblock %}

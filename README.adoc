@@ -34,7 +34,8 @@ To deploy the Babylon events console from the command line:
 --------------------------------------------------------------------------------
 oc process --local -f deploy-template.yaml \
   -p NAME="babylon-events-console" \
-  -p TEMPLATE="<TEMPLATE_NAMESPACE>//<TEMPLATE_NAME>" \
+  -p TEMPLATE_NAMESPACE="gpte" \
+  -p TEMPLATE_NAME="tests.babylon-empty-config.dev" \
   -p ACCESS_PASSWORD="MySecret" \
   -p ADMIN_PASSWORD="AdminSecret" \
 | oc create -f -
@@ -70,7 +71,8 @@ oc start-build babylon-events-console --from-dir=. -F
 CONSOLE_IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
 oc process --local -f deploy-template.yaml \
   -p NAME="babylon-events-console" \
-  -p TEMPLATE="<TEMPLATE_NAMESPACE>//<TEMPLATE_NAME>" \
+  -p TEMPLATE_NAMESPACE="gpte" \
+  -p TEMPLATE_NAME="tests.babylon-empty-config.dev" \
   -p ACCESS_PASSWORD="MySecret" \
   -p ADMIN_PASSWORD="AdminSecret" \
   -p REDIS_PASSWORD="RedisSecret" \

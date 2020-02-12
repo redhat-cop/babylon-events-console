@@ -5,11 +5,20 @@
 {% block content %}
 {% include "topnav.html" %}
 
+<div class="container">
 <h1>Login</h1>
 {%   if login_failed | default(False) %}
 <p>Login failed!</p>
 {%   endif %}
+{%   if invalid_session_id | default(False) %}
+<p>Invalid session id.</p>
+{%   endif %}
 <form method="POST" action="/login">
-Password: <input name="password" type="password">
+<p>User ID: <input name="id" type="email" value="{{ session_id | default('') | escape }}" required></p>
+{%   if password_required %}
+<p>Password: <input name="password" type="password"></p>
+{%   endif %}
+<p><button type="submit">Submit</button></p>
 </form>
+</div>
 {% endblock %}
