@@ -106,7 +106,20 @@ def get_api(group, version, kind):
     for resource in group_info['resources']:
         if resource['kind'] == kind:
             return resource['name'], resource['namespaced']
-    raise Exception('Unable to find kind {} in {}/{}', kind, group, version)
+    raise Exception('Unable to find kind {} in {}/{}'.format(kind, group, version))
+
+def get_lab_url(resource_claim):
+    routes = custom_objects_api.list_namespaced_custom_object(
+        'route.openshift.io', 'v1', console_namespace, 'routes',
+        label_selector="{}/resource-claim={}".format(poolboy_domain, resource_claim['metadata']['name'])
+    ).get('items', [])
+    if routes:
+        return '{}://{}/'.format(
+            'https' if 'tls' in routes[0]['spec'] else 'http',
+            routes[0]['spec']['host']
+        )
+    else:
+        return None
 
 def get_resource_claims(session_id=None):
     if session_id == 'unowned':
@@ -219,7 +232,11 @@ def index():
         else:
             resource_claims = provision_from_template(session_id)
 
-    return render_template('index.html', resource_claims=resource_claims, session_id=session_id, meta_refresh=meta_refresh)
+    lab_urls = [
+        get_lab_url(resource_claim) for resource_claim in resource_claims
+    ]
+
+    return render_template('index.html', resource_claims=resource_claims, lab_urls=lab_urls, session_id=session_id, meta_refresh=meta_refresh)
 
 @app.route('/admin', methods=['GET'])
 def admin():

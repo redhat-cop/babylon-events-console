@@ -16,6 +16,9 @@
 {%     set resource_claim_status = resource_claim.status | default({}) %}
 {%     set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
 <h2>{{ resource_claim_display_name }}</h2>
+{%     if lab_urls[loop.index0] %}
+<p><a href="{{ lab_urls[loop.index0] }}">{{ lab_urls[loop.index0] }}</a></p>
+{%     endif %}
 {%     if resource_claim_description %}
 <p>{{ resource_claim_description }}</p>
 {%     endif %}

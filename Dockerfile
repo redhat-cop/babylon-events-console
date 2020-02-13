@@ -8,11 +8,11 @@ COPY app app/
 
 EXPOSE 8080
 
-ENV VERSION "0.4"
-ENV FLASK_APP "app"
-ENV FLASK_ENV "development"
-ENV FLASK_RUN_PORT "8080"
-ENV FLASK_RUN_HOST "0.0.0.0"
+ENV VERSION="0.4" \
+    FLASK_APP="app" \
+    FLASK_ENV="development" \
+    FLASK_RUN_PORT="8080" \
+    FLASK_RUN_HOST="0.0.0.0"
 
 # Run app.py when the container launches
 CMD ["flask", "run"]
