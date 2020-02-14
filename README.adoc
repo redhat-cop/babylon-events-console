@@ -53,6 +53,12 @@ A separate lab console in a separate namespace should be used for each lab sessi
 
 ## Building the Events Console
 
+. Use the `ocp4-disconnected-lab` namespace.
++
+------------------------------------------------------------
+oc project ocp4-disconnected-lab
+------------------------------------------------------------
+
 . Create events console build configuration
 +
 ------------------------------------------------------------
@@ -73,9 +79,8 @@ oc process --local -f deploy-template.yaml \
   -p NAME="babylon-events-console" \
   -p TEMPLATE_NAMESPACE="gpte" \
   -p TEMPLATE_NAME="tests.babylon-empty-config.dev" \
-  -p ACCESS_PASSWORD="MySecret" \
-  -p ADMIN_PASSWORD="AdminSecret" \
-  -p REDIS_PASSWORD="RedisSecret" \
+  -p ADMIN_PASSWORD="r3dh4t1!" \
+  -p REDIS_PASSWORD="r3d1sS3cr3t" \
   -p CONSOLE_IMAGE="${CONSOLE_IMAGE}" \
 | oc apply -f -
 --------------------------------------------------------------------------------

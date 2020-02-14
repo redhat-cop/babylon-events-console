@@ -11,27 +11,56 @@
 <div class="container">
 {#     So many variables... all to protect jinja evaluation from undefined dictionary keys #}
 {%     set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
-{%     set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
+{%     set resource_claim_display_name = resource_claim_annotations['openshift.io/display-name'] | default(resource_claim.metadata.name) %}
 {%     set resource_claim_description = resource_claim_annotations.description | default('') %}
 {%     set resource_claim_status = resource_claim.status | default({}) %}
 {%     set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
+
 <h2>{{ resource_claim_display_name }}</h2>
-{%     if lab_urls[loop.index0] %}
-<p><a href="{{ lab_urls[loop.index0] }}">{{ lab_urls[loop.index0] }}</a></p>
-{%     endif %}
 {%     if resource_claim_description %}
 <p>{{ resource_claim_description }}</p>
 {%     endif %}
+
+{%     if lab_urls[loop.index0] %}
+<h3>Lab console:</h2>
+<p><a href="{{ lab_urls[loop.index0] }}">{{ lab_urls[loop.index0] }}</a></p>
+{%     endif %}
+
 {%     for resource in resource_claim.spec.resources %}
 {%       set resource_status = resource_claim_status_resources[loop.index0] | default({}) %}
 {%       set resource_state = resource_status.state | default({}) %}
 {%       set resource_state_spec = resource_state.spec | default({}) %}
 {%       set status_vars = resource_state_spec.vars | default({}) %}
 {%       set status_job_vars = status_vars.job_vars | default({}) %}
-{%       set template_vars = resource.template.spec.vars | default({}) %}
-<p>GUID: {{ status_job_vars.guid | default('UNKNOWN') }}</p>
-<p>Desired state: {{ template_vars.desired_state | default('UNKNOWN') }}</p>
-<p>Current state: {{ status_vars.current_state | default('UNKNOWN') }}</p>
+{%       set guid = status_job_vars.guid | default('') %}
+{%       set provision_data = status_vars.provision_data | default({}) %}
+{%       set provision_messages = status_vars.provision_messages | default([]) %}
+
+{%       if guid != '' %}
+<h3>Environment {{ guid }}</h3>
+
+<table>
+<tr>
+<th style="padding: 1pt 5pt">State</th>
+<td style="padding: 1pt 5pt">{{ status_vars.current_state | default('UNKNOWN') }}</td>
+</tr>
+{%         for k, v in provision_data.items() %}
+<tr>
+<th style="padding: 1pt 5pt">{{ k }}</th>
+<td style="padding: 1pt 5pt">{{ v }}</td>
+</tr>
+{%         endfor %}
+</table>
+
+{%         if provision_messages %}
+<h4>Messages:</h4>
+<p style="padding: 1pt 5pt">
+{%         for message in provision_messages %}
+{{ message }}<br>
+{%         endfor %}
+</p>
+{%         endif %}
+{%       endif %}
 {%     endfor %}
 </div>
 {%   endfor %}
