@@ -154,8 +154,6 @@ def assign_unowned_claim(session_id):
         if not claim_resources:
             continue
         subject_vars = claim_resources[0].get('state', {}).get('spec', {}).get('vars', {})
-        if subject_vars.get('current_state') != 'started':
-            continue
         try:
             if 'labels' not in resource_claim['metadata']:
                 resource_claim['metadata']['labels'] = {}
@@ -192,6 +190,11 @@ def provision_from_template(session_id=None):
             resource_claims.append(resource)
     return resource_claims
 
+def reset_session():
+    session['access_authenticated'] = False
+    session['id'] = None
+    session['resource_claim_assigned'] = False
+
 def substitute_template_parameters(value, parameters):
     if isinstance(value, dict):
         return { k:substitute_template_parameters(v, parameters) for k, v in value.items() }
@@ -210,6 +213,7 @@ def index():
     if access_password \
     and not session.get('access_authenticated') \
     and not session.get('admin_authenticated'):
+        reset_session()
         return render_template('login.html', password_required=(access_password != ''))
 
     # Session initialization
@@ -219,18 +223,26 @@ def index():
         if session_id:
             return redirect(url_for('index', session_id=session_id))
         else:
+            reset_session()
             return render_template('login.html', password_required=(access_password != ''))
 
     # Get lab environment settings
     resource_claims = get_resource_claims(session_id)
     meta_refresh = 30
     if not resource_claims:
+        if session.get('resource_claim_assigned', False):
+            # Resource claim is missing, access reset
+            reset_session()
+            return redirect(url_for('index'))
+
         meta_refresh = 2
         resource_claim = assign_unowned_claim(session_id)
         if resource_claim:
             resource_claims = [resource_claim]
         else:
             resource_claims = provision_from_template(session_id)
+
+    session['resource_claim_assigned'] = True
 
     lab_urls = [
         get_lab_url(resource_claim) for resource_claim in resource_claims
