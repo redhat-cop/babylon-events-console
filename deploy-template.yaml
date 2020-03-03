@@ -21,12 +21,12 @@ parameters:
   value: babylon-events-console
   required: true
 - name: TEMPLATE_NAME
-  displayName: Template
+  displayName: Template Name
   description: >-
     Babylon AgnosticV catalog item template name to provision for users.
   required: true
 - name: TEMPLATE_NAMESPACE
-  displayName: Template
+  displayName: Template Namespace
   description: >-
     Babylon AgnosticV catalog item template namespace.
   value: openshift

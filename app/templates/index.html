@@ -22,8 +22,8 @@
 {%     endif %}
 
 {%     if lab_urls[loop.index0] %}
-<h3>Lab console:</h2>
-<p><a href="{{ lab_urls[loop.index0] }}">{{ lab_urls[loop.index0] }}</a></p>
+<h3>Bookbag Lab Interface:</h2>
+<p><a href="{{ lab_urls[loop.index0] }}" target="_blank">{{ lab_urls[loop.index0] }}</a></p>
 {%     endif %}
 
 {%     for resource in resource_claim.spec.resources %}
