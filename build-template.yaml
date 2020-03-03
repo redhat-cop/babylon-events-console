@@ -10,13 +10,21 @@ parameters:
 - name: GIT_REPO
   value: https://github.com/redhat-gpte-devopsautomation/babylon-events-console.git
 - name: NAME
-  value: babylon-events-console
+  value: babylon-events
 
 objects:
 - apiVersion: image.openshift.io/v1
   kind: ImageStream
   metadata:
-    name: ${NAME}
+    name: ${NAME}-ui
+  spec:
+    lookupPolicy:
+      local: false
+
+- apiVersion: image.openshift.io/v1
+  kind: ImageStream
+  metadata:
+    name: ${NAME}-operator
   spec:
     lookupPolicy:
       local: false
@@ -24,16 +32,17 @@ objects:
 - apiVersion: v1
   kind: BuildConfig
   metadata:
-    name: ${NAME}
+    name: ${NAME}-ui
   spec:
     output:
       to:
         kind: ImageStreamTag
-        name: ${NAME}:latest
+        name: ${NAME}-ui:latest
     postCommit: {}
     resources: {}
     runPolicy: Serial
     source:
+      contextDir: ui
       git:
         uri: ${GIT_REPO}
         ref: master
@@ -43,4 +52,29 @@ objects:
         from:
           kind: DockerImage
           name: registry.access.redhat.com/ubi8/python-36:latest
+    triggers: []
+
+- apiVersion: v1
+  kind: BuildConfig
+  metadata:
+    name: ${NAME}-operator
+  spec:
+    output:
+      to:
+        kind: ImageStreamTag
+        name: ${NAME}-operator:latest
+    postCommit: {}
+    resources: {}
+    runPolicy: Serial
+    source:
+      contextDir: operator
+      git:
+        uri: ${GIT_REPO}
+        ref: master
+    strategy:
+      type: Docker
+      dockerStrategy:
+        from:
+          kind: DockerImage
+          name: registry.access.redhat.com/ubi8:latest
     triggers: []

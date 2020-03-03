@@ -1,0 +1,9 @@
+ansible
+inflection
+jmespath
+kopf
+kubernetes
+prometheus_client
+pyasn1
+pyOpenSSL
+werkzeug
