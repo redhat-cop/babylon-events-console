@@ -197,7 +197,7 @@ def reset_session():
 
 def substitute_template_parameters(value, parameters):
     if isinstance(value, dict):
-        return { k:substitute_template_parameters(v, parameters) for k, v in value.items() }
+        return { k: substitute_template_parameters(v, parameters) for k, v in value.items() }
     elif isinstance(value, list):
         return [ substitute_template_parameters(item, parameters) for item in value ]
     elif isinstance(value, str):

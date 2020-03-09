@@ -10,5 +10,9 @@ echo operator:x:$(id -u):$(id -g):operator:/operator:/bin/sh >> $NSS_WRAPPER_PAS
 export LD_PRELOAD=libnss_wrapper.so
 export NSS_WRAPPER_PASSWD
 export NSS_WRAPPER_GROUP
+export OPERATOR_NAMESPACE="$(cat /run/secrets/kubernetes.io/serviceaccount/namespace)"
 
-exec kopf run --standalone /operator/beui.py
+exec kopf run --standalone \
+  --namespace=$OPERATOR_NAMESPACE \
+  --liveness=http://0.0.0.0:8080/healthz \
+  /operator/beui.py
