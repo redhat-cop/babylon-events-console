@@ -316,13 +316,13 @@ def login():
     session_id = request.form.get('id')
 
     if len(session_id) < 6:
-        return render_template('login.html', session_id=session_id, invalid_session_id=True)
+        return render_template('login.html', session_id=session_id, invalid_session_id=True, password_required=(access_password != ''))
 
     if access_password:
         if access_password == request.form.get('password'):
             session['access_authenticated'] = True
         else:
-            return render_template('login.html', login_failed=True)
+            return render_template('login.html', login_failed=True, password_required=True)
 
     session['id'] = session.get('id', session_id)
     return redirect(url_for('index', session_id=session_id))
