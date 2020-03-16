@@ -269,8 +269,7 @@ def admin_delete_resource_claim(claim_name):
 
     try:
         custom_objects_api.delete_namespaced_custom_object(
-            poolboy_domain, poolboy_version, namespace, 'resourceclaims', claim_name,
-            kubernetes.client.V1DeleteOptions()
+            poolboy_domain, poolboy_version, namespace, 'resourceclaims', claim_name
         )
     except ApiException as e:
         if e.status != 404:

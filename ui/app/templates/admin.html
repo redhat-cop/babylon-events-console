@@ -32,8 +32,11 @@
 </td>
 <td style="padding: 1pt 5pt">{{ config_map.metadata.labels['beui.gpte.redhat.com/session-id'] | default('unowned', True) }}</td>
 <td style="padding: 0">
-<form method="POST" action="/admin/unbind/{{ config_map.metadata.name }}" onsubmit="return confirm('Confirm unbind {{ config_map.metadata.name }}?')">
-<button type="submit">Unbind</button>
+<form
+  method="POST"
+  action="/admin/unbind/{{ config_map.metadata.name }}"
+  onsubmit="return confirm('Confirm unbind {{ config_map.metadata.name }}?')">
+<button type="submit" {% if not config_map.metadata.labels['beui.gpte.redhat.com/session-id'] %}disabled style="color: #777"{% endif %}>Unbind</button>
 </form>
 </td>
 </tr>
