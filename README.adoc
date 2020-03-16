@@ -33,9 +33,9 @@ To deploy the Babylon events console from the command line:
 
 --------------------------------------------------------------------------------
 oc process --local -f deploy-template.yaml \
-  -p NAME="babylon-events-console" \
-  -p TEMPLATE_NAMESPACE="gpte" \
-  -p TEMPLATE_NAME="tests.babylon-empty-config.dev" \
+  -p NAME="babylon-events" \
+  -p CATALOG_TEMPLATE_NAMESPACE="gpte" \
+  -p CATALOG_TEMPLATE_NAME="tests.babylon-empty-config.dev" \
   -p ACCESS_PASSWORD="MySecret" \
   -p ADMIN_PASSWORD="AdminSecret" \
 | oc create -f -
@@ -68,20 +68,23 @@ oc process --local -f build-template.yaml | oc apply -f -
 . Build events console image
 +
 ------------------------------------------------------------
-oc start-build babylon-events-console --from-dir=. -F
+oc start-build babylon-events-ui --from-dir=. -F
 ------------------------------------------------------------
 
 . Deploy events console from build image.
 +
 --------------------------------------------------------------------------------
-CONSOLE_IMAGE=$(oc get imagestream babylon-events-console -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
+OPERATOR_IMAGE=$(oc get imagestream babylon-events-operator -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
+UI_IMAGE=$(oc get imagestream babylon-events-ui -o jsonpath='{.status.tags[?(@.tag=="latest")].items[0].dockerImageReference}')
 oc process --local -f deploy-template.yaml \
-  -p NAME="babylon-events-console" \
-  -p TEMPLATE_NAMESPACE="gpte" \
-  -p TEMPLATE_NAME="tests.babylon-empty-config.dev" \
+  -p NAME="babylon-events" \
+  -p BOOKBAG_IMAGESTREAM_NAME="bookbag" \
+  -p CATALOG_TEMPLATE_NAMESPACE="gpte" \
+  -p CATALOG_TEMPLATE_NAME="tests.babylon-empty-config.dev" \
   -p ADMIN_PASSWORD="r3dh4t1!" \
   -p REDIS_PASSWORD="r3d1sS3cr3t" \
-  -p CONSOLE_IMAGE="${CONSOLE_IMAGE}" \
+  -p OPERATOR_IMAGE="${OPERATOR_IMAGE}" \
+  -p UI_IMAGE="${UI_IMAGE}" \
 | oc apply -f -
 --------------------------------------------------------------------------------
 +

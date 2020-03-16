@@ -42,9 +42,12 @@ def manage_config_map(name, data, resource_claim_ref):
     '''
     Create or update config map based on config map data
     '''
+    data = {
+        k: data[k] if isinstance(data[k], str) else json.dumps(data[k]) for k in data
+    }
     try:
         config_map = core_v1_api.read_namespaced_config_map(name, namespace)
-        config_map.data.update(data)
+        config_map.data = data
         core_v1_api.replace_namespaced_config_map(name, namespace, config_map)
     except kubernetes.client.rest.ApiException as e:
         if e.status == 404:
@@ -149,16 +152,12 @@ def handle_resource_claim(resource_claim, logger):
     if users:
         for user, user_data in users.items():
             user_data['guid'] = guid
-            user_data['GUID'] = guid
             user_data['user'] = user
-            user_data['USER'] = user
             manage_config_map('bookbag-{0}-{1}'.format(guid, user), user_data, resource_claim_ref)
     else:
         if provision_messages:
-            provision_data['provision_messages'] = "\n".join(provision_messages)
-            provision_data['messages'] = "\n".join(provision_messages)
+            provision_data['user_info_messages'] = "\n".join(provision_messages)
         provision_data['guid'] = guid
-        provision_data['GUID'] = guid
         manage_config_map('bookbag-{0}'.format(guid), provision_data, resource_claim_ref)
 
 @kopf.on.event(poolboy_domain, poolboy_version, 'resourceclaims')

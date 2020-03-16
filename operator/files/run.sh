@@ -1,5 +1,5 @@
 #!/bin/sh
-  
+
 NSS_WRAPPER_PASSWD=/operator/nss/passwd
 NSS_WRAPPER_GROUP=/operator/nss/group
 

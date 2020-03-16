@@ -1,5 +1,5 @@
 #!/bin/sh
-  
+
 PYTHON_VERSION=${PYTHON_VERSION:-3.8.2}
 PYTHON_MAJOR_VERSION=$(echo ${PYTHON_VERSION} | sed 's/\.[0-9]*$//')
 

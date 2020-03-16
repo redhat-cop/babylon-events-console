@@ -1,13 +1,14 @@
 """
-This module runs a simple Flask-based front-end to Babylon/Anarchy 
-ResourceClaims
+This module runs a simple Flask-based front-end to Babylon/Anarchy
 """
+import json
+import kubernetes
 import os
 import random
 import redis
 import string
+import subprocess
 import time
-import kubernetes
 import yaml
 from base64 import b32encode, b32decode
 from kubernetes.client.rest import ApiException
@@ -16,31 +17,29 @@ from flask_session import Session
 from flask_bootstrap import Bootstrap
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-
 if os.path.exists("/var/run/secrets/kubernetes.io/serviceaccount/namespace"):
-    console_namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
+    namespace = open("/var/run/secrets/kubernetes.io/serviceaccount/namespace").read()
     kubernetes.config.load_incluster_config()
 else:
     kubernetes.config.load_kube_config()
-    console_namespace = kubernetes.config.list_kube_config_contexts()[1]['context']['namespace']
+    namespace = kubernetes.config.list_kube_config_contexts()[1]['context']['namespace']
 
 def random_string(length):
     return ''.join([random.choice(string.ascii_letters + string.digits) for n in range(length)])
 
 access_password = os.getenv('ACCESS_PASSWORD', '')
 admin_password = os.getenv('ADMIN_PASSWORD', random_string(32))
-poolboy_domain = os.getenv('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
-poolboy_version = os.getenv('POOLBOY_VERSION', 'v1')
-poolboy_api_version = poolboy_domain + '/' + poolboy_version
 
 core_v1_api = kubernetes.client.CoreV1Api()
 custom_objects_api = kubernetes.client.CustomObjectsApi()
 
-template_name = os.getenv('TEMPLATE_NAME', '')
-if template_name == '':
-    raise Exception('TEMPLATE_NAME environment variable not set!')
-template_namespace = os.getenv('TEMPLATE_NAMESPACE', 'openshift')
-template_parameters = yaml.safe_load(os.getenv('TEMPLATE_PARAMETERS', '{}'))
+beui_domain = os.environ.get('BEUI_DOMAIN', 'beui.gpte.redhat.com')
+catalog_template_name = os.getenv('CATALOG_TEMPLATE_NAME', '')
+catalog_template_namespace = os.getenv('CATALOG_TEMPLATE_NAMESPACE', 'openshift')
+catalog_template_parameters = yaml.safe_load(os.getenv('CATALOG_TEMPLATE_PARAMETERS', '{}'))
+catalog_template_quota = int(os.getenv('CATALOG_TEMPLATE_QUOTA', 5))
+poolboy_domain = os.getenv('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
+poolboy_version = os.getenv('POOLBOY_VERSION', 'v1')
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
@@ -62,80 +61,88 @@ def encode_session_id(session_id):
 def decode_session_id(session_id):
     return b32decode(session_id.replace('z','=')).decode('utf-8')
 
-def create_resource(resource_definition):
-    if '/' in resource_definition['apiVersion']:
-        group, version = resource_definition['apiVersion'].split('/')
-        namespace = resource_definition['metadata'].get('namespace', console_namespace)
-        plural, namespaced = get_api(group, version, resource_definition['kind'])
-        if namespaced:
-            return custom_objects_api.create_namespaced_custom_object(
-                group, version, namespace, plural, resource_definition
-            )
-        else:
-            return custom_objects_api.create_cluster_custom_object(
-                group, version, plural, resource_definition
-            )
-    else:
-        kind = resource_definition['kind']
-        namespace = resource_definition['metadata'].get('namespace', console_namespace)
-        create_namespaced_method = 'create_namespaced_' + inflection.underscore(kind)
-        create_cluster_method = 'create_' + inflection.underscore(kind)
-        if hasattr(core_v1_api, create_namespaced_method):
-            method = getattr(core_v1_api, create_namespaced_method)
-            return method(namespace, resource_definition).to_dict()
-        else:
-            method = getattr(core_v1_api, create_cluster_method)
-            return method(resource_definition).to_dict()
+#def create_resource(resource_definition):
+#    if '/' in resource_definition['apiVersion']:
+#        group, version = resource_definition['apiVersion'].split('/')
+#        namespace = resource_definition['metadata'].get('namespace', namespace)
+#        plural, namespaced = get_api(group, version, resource_definition['kind'])
+#        if namespaced:
+#            return custom_objects_api.create_namespaced_custom_object(
+#                group, version, namespace, plural, resource_definition
+#            )
+#        else:
+#            return custom_objects_api.create_cluster_custom_object(
+#                group, version, plural, resource_definition
+#            )
+#    else:
+#        kind = resource_definition['kind']
+#        namespace = resource_definition['metadata'].get('namespace', namespace)
+#        create_namespaced_method = 'create_namespaced_' + inflection.underscore(kind)
+#        create_cluster_method = 'create_' + inflection.underscore(kind)
+#        if hasattr(core_v1_api, create_namespaced_method):
+#            method = getattr(core_v1_api, create_namespaced_method)
+#            return method(namespace, resource_definition).to_dict()
+#        else:
+#            method = getattr(core_v1_api, create_cluster_method)
+#            return method(resource_definition).to_dict()
 
-def get_api(group, version, kind):
-    if group in api_groups \
-    and version in api_groups[group]:
-        for resource in api_groups[group][version]['resources']:
-            if resource['kind'] == kind:
-                return resource['name'], resource['namespaced']
+#def get_api(group, version, kind):
+#    if group in api_groups \
+#    and version in api_groups[group]:
+#        for resource in api_groups[group][version]['resources']:
+#            if resource['kind'] == kind:
+#                return resource['name'], resource['namespaced']
+#
+#    resp = core_v1_api.api_client.call_api(
+#        '/apis/{}/{}'.format(group, version), 'GET',
+#        auth_settings=['BearerToken'], response_type='object'
+#    )
+#    group_info = resp[0]
+#    if group not in api_groups:
+#        api_groups[group] = {}
+#    api_groups[group][version] = group_info
+#
+#    for resource in group_info['resources']:
+#        if resource['kind'] == kind:
+#            return resource['name'], resource['namespaced']
+#    raise Exception('Unable to find kind {} in {}/{}'.format(kind, group, version))
 
-    resp = core_v1_api.api_client.call_api(
-        '/apis/{}/{}'.format(group, version), 'GET',
-        auth_settings=['BearerToken'], response_type='object'
-    )
-    group_info = resp[0]
-    if group not in api_groups:
-        api_groups[group] = {}
-    api_groups[group][version] = group_info
-
-    for resource in group_info['resources']:
-        if resource['kind'] == kind:
-            return resource['name'], resource['namespaced']
-    raise Exception('Unable to find kind {} in {}/{}'.format(kind, group, version))
-
-def get_lab_url(resource_claim):
-    routes = custom_objects_api.list_namespaced_custom_object(
-        'route.openshift.io', 'v1', console_namespace, 'routes',
-        label_selector="{}/resource-claim={}".format(poolboy_domain, resource_claim['metadata']['name'])
-    ).get('items', [])
-    if routes:
-        return '{}://{}/'.format(
-            'https' if 'tls' in routes[0]['spec'] else 'http',
-            routes[0]['spec']['host']
+def get_lab_url(config_map):
+    try:
+        route = custom_objects_api.get_namespaced_custom_object(
+            'route.openshift.io', 'v1', namespace, 'routes', config_map.metadata.name
         )
+        if 'tls' in route['spec']:
+            return 'https://{0}/'.format(route['spec']['host'])
+        else:
+            return 'http://{0}/'.format(route['spec']['host'])
+    except ApiException as e:
+        if e.status != 404:
+            raise
+
+def get_all_lab_config_maps():
+    return core_v1_api.list_namespaced_config_map(
+        namespace, label_selector=beui_domain + '/session-id'
+    ).items
+
+def get_unowned_lab_config_maps():
+    return core_v1_api.list_namespaced_config_map(
+        namespace, label_selector=beui_domain + '/session-id='
+    ).items
+
+def get_session_lab_config_map(session_id):
+    config_maps = core_v1_api.list_namespaced_config_map(
+        namespace, label_selector=beui_domain + '/session-id={0}'.format(encode_session_id(session_id))
+    ).items
+    if config_maps:
+        return config_maps[0]
     else:
         return None
 
-def get_resource_claims(session_id=None):
-    if session_id == 'unowned':
-        return custom_objects_api.list_namespaced_custom_object(
-            poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
-            label_selector='!session-id'
-        ).get('items', [])
-    elif session_id:
-        return custom_objects_api.list_namespaced_custom_object(
-            poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
-            label_selector='session-id=' + encode_session_id(session_id)
-        ).get('items', [])
-    else:
-        return custom_objects_api.list_namespaced_custom_object(
-            poolboy_domain, poolboy_version, console_namespace, 'resourceclaims'
-        ).get('items', [])
+def get_resource_claims():
+    return custom_objects_api.list_namespaced_custom_object(
+        poolboy_domain, poolboy_version, namespace, 'resourceclaims'
+    ).get('items', [])
 
 def get_session_id():
     session_id = session.get('id', None)
@@ -144,68 +151,43 @@ def get_session_id():
         session['id'] = session_id
     return session_id
 
-def assign_unowned_claim(session_id):
+def assign_unowned_lab_config_map(session_id):
     '''
-    Assigned an unowned resource claim to this session.
+    Assigned an unowned config map to this session.
     '''
-    resource_claims = get_resource_claims('unowned')
-    for resource_claim in resource_claims:
-        claim_resources = resource_claim.get('status',{}).get('resources', None)
-        if not claim_resources:
-            continue
-        subject_vars = claim_resources[0].get('state', {}).get('spec', {}).get('vars', {})
+    config_maps = get_unowned_lab_config_maps()
+    for config_map in config_maps:
         try:
-            if 'labels' not in resource_claim['metadata']:
-                resource_claim['metadata']['labels'] = {}
-            resource_claim['metadata']['labels']['session-id'] = encode_session_id(session_id)
-            return custom_objects_api.replace_namespaced_custom_object(
-                poolboy_domain, poolboy_version, console_namespace, 'resourceclaims',
-                resource_claim['metadata']['name'], resource_claim
-            )
+            config_map.metadata.labels[beui_domain + '/session-id'] = encode_session_id(session_id)
+            return core_v1_api.replace_namespaced_config_map(config_map.metadata.name, namespace, config_map)
         except ApiException as e:
             # 409 means the resource changed, most likely because another user claimed it first
             if e.status != 409:
                 raise
-
+    # No free lab config map available
     return None
 
-def provision_from_template(session_id=None):
-    template = custom_objects_api.get_namespaced_custom_object(
-        'template.openshift.io', 'v1', template_namespace, 'templates', template_name
-    )
+def process_catalog_template():
+    '''
+    Use `oc` to process bookbag template and produce resource list json.
+    '''
+    oc_process_cmd = [
+        'oc', 'process', catalog_template_namespace + '//' + catalog_template_name,
+        '-o', 'json'
+    ]
+    for k, v in catalog_template_parameters.items():
+        oc_process_cmd.extend(['-p', '{0}={1}'.format(k, v)])
+    oc_process_result = subprocess.run(oc_process_cmd, stdout=subprocess.PIPE, check=True)
+    return json.loads(oc_process_result.stdout)
 
-    resource_claims = []
-    for resource_definition in substitute_template_parameters(template.get('objects', []), template_parameters):
-        if 'annotations' not in resource_definition['metadata']:
-            resource_definition['metadata']['annotations'] = {}
-        resource_definition['metadata']['annotations']['template.openshift.io/name'] = template['metadata']['name']
-        resource_definition['metadata']['annotations']['template.openshift.io/namespace'] = template['metadata']['namespace']
-        if 'labels' not in resource_definition['metadata']:
-            resource_definition['metadata']['labels'] = {}
-        if session_id:
-            resource_definition['metadata']['labels']['session-id'] = encode_session_id(session_id)
-        resource = create_resource(resource_definition)
-        if resource['apiVersion'] == poolboy_api_version \
-        and resource['kind'] == 'ResourceClaim':
-            resource_claims.append(resource)
-    return resource_claims
+def provision_catalog_item():
+    template_output = process_catalog_template()
+    oc_create_result = subprocess.run(['oc', 'create', '-f', '-'], input=json.dumps(template_output).encode('utf-8'), check=True)
 
 def reset_session():
     session['access_authenticated'] = False
     session['id'] = None
-    session['resource_claim_assigned'] = False
-
-def substitute_template_parameters(value, parameters):
-    if isinstance(value, dict):
-        return { k: substitute_template_parameters(v, parameters) for k, v in value.items() }
-    elif isinstance(value, list):
-        return [ substitute_template_parameters(item, parameters) for item in value ]
-    elif isinstance(value, str):
-        for k, v in parameters.items():
-            value = value.replace('${' + k + '}', v)
-        return value
-    else:
-        return value
+    session['config_map_assigned'] = False
 
 @app.route('/', methods=['GET'])
 def index():
@@ -227,47 +209,56 @@ def index():
             return render_template('login.html', password_required=(access_password != ''))
 
     # Get lab environment settings
-    resource_claims = get_resource_claims(session_id)
-    meta_refresh = 30
-    if not resource_claims:
-        if session.get('resource_claim_assigned', False):
-            # Resource claim is missing, access reset
+    config_map = get_session_lab_config_map(session_id)
+
+    if not config_map:
+        if session.get('config_map_assigned', False):
+            # Config map is missing, access reset
             reset_session()
             return redirect(url_for('index'))
+        config_map = assign_unowned_lab_config_map(session_id)
 
-        meta_refresh = 2
-        resource_claim = assign_unowned_claim(session_id)
-        if resource_claim:
-            resource_claims = [resource_claim]
-        else:
-            resource_claims = provision_from_template(session_id)
+    if config_map:
+        session['config_map_assigned'] = True
+        lab_url = get_lab_url(config_map)
+    else:
+        lab_url = None
 
-    session['resource_claim_assigned'] = True
-
-    lab_urls = [
-        get_lab_url(resource_claim) for resource_claim in resource_claims
-    ]
-
-    return render_template('index.html', resource_claims=resource_claims, lab_urls=lab_urls, session_id=session_id, meta_refresh=meta_refresh)
+    return render_template('index.html', lab_data=config_map.data, lab_url=lab_url, session_id=session_id)
 
 @app.route('/admin', methods=['GET'])
 def admin():
     if not session.get('admin_authenticated'):
         return render_template('admin-login.html')
 
+    lab_environments = [{
+        "config_map": config_map,
+        "lab_url": get_lab_url(config_map)
+    } for config_map in get_all_lab_config_maps() ]
+
     resource_claims = get_resource_claims()
-    return render_template('admin.html', resource_claims=resource_claims)
+    return render_template('admin.html',
+        lab_environments=lab_environments,
+        resource_claims=resource_claims,
+        catalog_template_name=catalog_template_name,
+        catalog_template_namespace=catalog_template_namespace,
+        catalog_template_quota=catalog_template_quota
+    )
 
 @app.route('/admin/create', methods=['POST'])
 def admin_create():
     if not session.get('admin_authenticated'):
         return render_template('admin-login.html')
 
-    number = int(request.form.get('number', 1))
-    for i in range(number):
-        provision_from_template()
+    resource_claims = get_resource_claims()
 
-    flash('{0} environment{1} created'.format(number, 's' if number > 1 else ''))
+    if len(resource_claims) >= catalog_template_quota:
+        flash('Quota restriction, refusing to create environment')
+        return redirect(url_for('admin'))
+
+    provision_catalog_item()
+
+    flash('Lab environment created')
     return redirect(url_for('admin'))
 
 @app.route('/admin/delete/<claim_name>', methods=['POST'])
@@ -278,13 +269,33 @@ def admin_delete_resource_claim(claim_name):
 
     try:
         custom_objects_api.delete_namespaced_custom_object(
-            poolboy_domain, poolboy_version, console_namespace, 'resourceclaims', claim_name,
+            poolboy_domain, poolboy_version, namespace, 'resourceclaims', claim_name,
             kubernetes.client.V1DeleteOptions()
         )
     except ApiException as e:
         if e.status != 404:
             raise
     flash('{0} deleted'.format(claim_name))
+    return redirect(url_for('admin'))
+
+@app.route('/admin/unbind/<name>', methods=['POST'])
+def admin_unbind_config_map(name):
+    if not session.get('admin_authenticated'):
+        flash('authentication required')
+        return redirect(url_for('admin'))
+
+    try:
+        config_map = core_v1_api.read_namespaced_config_map(
+            name, namespace
+        )
+        config_map.metadata.labels[beui_domain + '/session-id'] = ''
+        core_v1_api.replace_namespaced_config_map(name, namespace, config_map)
+    except ApiException as e:
+        if e.status == 404:
+            flash('{0} not found'.format(name))
+        else:
+            raise
+    flash('{0} unbound'.format(name))
     return redirect(url_for('admin'))
 
 @app.route('/admin/login', methods=['POST'])

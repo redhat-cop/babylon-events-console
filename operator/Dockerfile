@@ -1,5 +1,5 @@
 FROM registry.access.redhat.com/ubi8:latest
-  
+
 USER 0
 
 COPY files /operator

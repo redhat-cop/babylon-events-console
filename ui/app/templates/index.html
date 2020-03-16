@@ -4,8 +4,36 @@
 
 {% block content %}
 {% include "topnav.html" %}
+<div class="container">
 
 {{util.flashed_messages(dismissible=True)}}
+
+{%   if lab_url %}
+<h3>Lab Interface:</h2>
+<p><a href="{{ lab_url }}" target="_blank">{{ lab_url }}</a></p>
+{%   endif %}
+
+{%   if lab_data %}
+<h3>Lab Environment</h3>
+<table>
+{%     for k, v in lab_data.items() %}
+{%       if k not in ['user_info_messages'] %}
+<tr>
+<th style="padding: 1pt 5pt">{{ k }}</th>
+<td style="padding: 1pt 5pt">{{ v }}</td>
+</tr>
+{%       endif %}
+{%     endfor %}
+</table>
+
+{%     if 'user_info_messages' in lab_data %}
+<h4>Messages:</h4>
+<p style="white-space: pre-line">{{ lab_data.user_info_messages }}</p>
+{%     endif %}
+</p>
+{%   else %}
+<p>No lab environment available.</p>
+{%   endif %}
 
 {%   for resource_claim in resource_claims %}
 <div class="container">
@@ -64,4 +92,5 @@
 {%     endfor %}
 </div>
 {%   endfor %}
+</div>
 {% endblock %}

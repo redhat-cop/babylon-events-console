@@ -10,12 +10,42 @@
 <p><a href="/admin/logout">logout</a></p>
 {{util.flashed_messages(dismissible=True)}}
 
+<h2>Lab Environments</h2>
+<table>
+<tr>
+<th></th>
+<th style="padding: 1pt 5pt">Name</th>
+<th style="padding: 1pt 5pt">User</th>
+<th style="padding: 1pt 0">Action</th>
+</tr>
+{%   for lab_environment in lab_environments %}
+{%     set config_map = lab_environment.config_map %}
+{%     set lab_url = lab_environment.lab_url %}
+<tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
+<td style="padding: 1pt 5pt">{{ loop.index }}</td>
+<td style="padding: 1pt 5pt">
+{% if lab_url %}
+<a href="{{ lab_url }}" target="_blank">{{ config_map.metadata.name }}</a>
+{% else %}
+{{ config_map.metadata.name }}
+{% endif %}
+</td>
+<td style="padding: 1pt 5pt">{{ config_map.metadata.labels['beui.gpte.redhat.com/session-id'] | default('unowned', True) }}</td>
+<td style="padding: 0">
+<form method="POST" action="/admin/unbind/{{ config_map.metadata.name }}" onsubmit="return confirm('Confirm unbind {{ config_map.metadata.name }}?')">
+<button type="submit">Unbind</button>
+</form>
+</td>
+</tr>
+{%   endfor %}
+</table>
+
+<h2>Provisioned Infrastructure</h2>
 <table>
 <tr>
 <th></th>
 <th style="padding: 1pt 5pt">Claim</th>
-<th style="padding: 1pt 5pt">GUID</th>
-<th style="padding: 1pt 5pt">User</th>
+<th style="padding: 1pt 5pt">Handle</th>
 <th style="padding: 1pt 5pt">State</th>
 <th style="padding: 1pt 0">Action</th>
 </tr>
@@ -24,27 +54,29 @@
 {%     set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
 {%     set resource_claim_labels = resource_claim.metadata.labels | default({}) %}
 {%     set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
-{%     set resource_claim_session_id = resource_claim_labels['session-id'] | default('unowned') %}
 {%     set resource_claim_status = resource_claim.status | default({}) %}
-{%     set resource_claim_status_resources = resource_claim_status.resources | default([]) %}
-{%     set resource_status = resource_claim_status_resources[0] | default({}) %}
-{%     set resource_state = resource_status.state | default({}) %}
-{%     set resource_state_spec = resource_state.spec | default({}) %}
-{%     set status_vars = resource_state_spec.vars | default({}) %}
-{%     set status_job_vars = status_vars.job_vars | default({}) %}
-{%     set guid = status_job_vars.guid | default('UNKNOWN') %}
+{%     set resource_handle = resource_claim_status.resourceHandle | default({}) %}
+{%     set resource_handle_name = resource_handle.name | default('') %}
 <tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
 <td style="padding: 1pt 5pt">{{ loop.index }}</td>
 <td style="padding: 1pt 5pt">{{ resource_claim_display_name }}</td>
-<td style="padding: 1pt 5pt">{{ guid }}</td>
-{% if resource_claim_session_id == 'unowned' %}
-<td style="padding: 1pt 5pt">unowned</td>
-{% else %}
-<td style="padding: 1pt 5pt">{{ resource_claim_session_id | decode_session_id }}</td>
-{% endif %}
-<td style="padding: 1pt 5pt">{{ status_vars.current_state | default('UNKNOWN') }}</td>
+<td style="padding: 1pt 5pt">{{ resource_handle_name }}</td>
+<td style="padding: 1pt 5pt">
+{%     if 'resources' in resource_claim_status %}
+{%       for status_resource_item in resource_claim_status.resources | default([]) %}
+{%         set resource_state = status_resource_item.state | default({}) %}
+{%         set resource_state_meta = resource_state.metadata | default({}) %}
+{%         set resource_state_spec = resource_state.spec | default({}) %}
+{%         set resource_vars = resource_state_spec.vars | default({}) %}
+{%         set resource_job_vars = resource_vars.job_vars | default({}) %}
+{{ resource_state_meta.name | default('pending') }} {{ resource_vars.current_state | default('UNKNOWN') }}<br>
+{%       endfor %}
+{%     else %}
+UNKNOWN
+{%     endif %}
+</td>
 <td style="padding: 0">
-<form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}">
+<form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}" onsubmit="return confirm('Confirm delete {{ resource_claim.metadata.name }}?')">
 <button type="submit">Delete</button>
 </form>
 </td>
@@ -52,10 +84,9 @@
 {%   endfor %}
 </table>
 
-<h2>Create Lab Environments</h2>
 <form method="POST" action="/admin/create">
-Number <input type="number" name="number" min="1" max="500" value="1">
-<button type="submit">Create</button>
+<button type="submit">Provision New Environment</button>
 </form>
+
 </div>
 {% endblock %}

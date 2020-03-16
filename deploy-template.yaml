@@ -1,3 +1,4 @@
+---
 apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
@@ -18,25 +19,7 @@ message: |-
 parameters:
 - name: NAME
   displayName: Name to apply to template resources
-  value: babylon-events-console
-  required: true
-- name: TEMPLATE_NAME
-  displayName: Template Name
-  description: >-
-    Babylon AgnosticV catalog item template name to provision for users.
-  required: true
-- name: TEMPLATE_NAMESPACE
-  displayName: Template Namespace
-  description: >-
-    Babylon AgnosticV catalog item template namespace.
-  value: openshift
-  required: true
-- name: TEMPLATE_PARAMETERS
-  displayName: Template parameters
-  description: >-
-    Parameters to pass to template when creating user lab environments.
-    Provide parameters as a JSON or YAML dictionary.
-  value: '{}'
+  value: babylon-events
   required: true
 - name: ACCESS_PASSWORD
   displayName: User Access Password
@@ -47,34 +30,72 @@ parameters:
   generate: expression
   from: '[a-zA-Z0-9]{8}'
   required: true
+- name: BOOKBAG_IMAGESTREAM_NAME
+  displayName: Bookbag Image Stream Name
+  description: >-
+    Image Stream with Bookbag image for lab.
+    If provided then bookbag pods will be created automatically.
+- name: CATALOG_TEMPLATE_NAME
+  displayName: Template Name
+  description: >-
+    Babylon AgnosticV catalog item template name to provision for users.
+  required: true
+- name: CATALOG_TEMPLATE_NAMESPACE
+  displayName: Template Namespace
+  description: >-
+    Babylon AgnosticV catalog item template namespace.
+  value: openshift
+  required: true
+- name: CATALOG_TEMPLATE_PARAMETERS
+  displayName: Template parameters
+  description: >-
+    Parameters to pass to template when creating user lab environments.
+    Provide parameters as a JSON or YAML dictionary.
+  value: '{}'
+  required: true
 - name: HOSTNAME
   displayName: Route Hostname
   description: >-
     Hostname for events console route.
   required: false
-- name: CONSOLE_IMAGE
+- name: OPERATOR_IMAGE
+  displayName: Babylon events console image
+  value: quay.io/redhat-cop/babylon-events-console-operator:latest
+  required: true
+- name: OPERATOR_IMAGE_PULL_POLICY
+  value: IfNotPresent
+  required: true
+- name: OPERATOR_CPU_LIMIT
+  displayName: Operator CPU Limit
+  description: >-
+    Operator container cpu limit.
+  required: true
+  value: 500m
+- name: OPERATOR_MEMORY_LIMIT
+  displayName: Operator Memory Limit
+  description: >-
+    Operator container memory limit.
+  required: true
+  value: 1Gi
+- name: UI_IMAGE
   displayName: Babylon events console image
   value: quay.io/redhat-cop/babylon-events-console:latest
   required: true
-- name: CONSOLE_IMAGE_PULL_POLICY
-  value: Always
+- name: UI_IMAGE_PULL_POLICY
+  value: IfNotPresent
   required: true
-- name: CONSOLE_CPU_LIMIT
-  displayName: Redis CPU Limit
+- name: UI_CPU_LIMIT
+  displayName: UI CPU Limit
   description: >-
-    Redis container cpu limit.
+    UI container cpu limit.
   required: true
   value: 500m
-- name: CONSOLE_MEMORY_LIMIT
-  displayName: Redis Memory Limit
+- name: UI_MEMORY_LIMIT
+  displayName: UI Memory Limit
   description: >-
-    Redis container memory limit.
+    UI container memory limit.
   required: true
   value: 512Mi
-- name: POOLBOY_DOMAIN
-  displayName: Poolboy operator CRD domain
-  value: poolboy.gpte.redhat.com
-  required: true
 - name: REDIS_IMAGE
   displayName: Redis Image
   value: registry.redhat.io/rhscl/redis-32-rhel7:latest
@@ -112,47 +133,13 @@ objects:
     name: ${NAME}
 
 - apiVersion: rbac.authorization.k8s.io/v1
-  kind: Role
-  metadata:
-    name: ${NAME}
-  rules:
-  - apiGroups:
-    - route.openshift.io
-    resources:
-    - routes
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - template.openshift.io
-    resources:
-    - templates
-    verbs:
-    - get
-    - list
-    - watch
-  - apiGroups:
-    - ${POOLBOY_DOMAIN}
-    resources:
-    - resourceclaims
-    verbs:
-    - create
-    - delete
-    - get
-    - list
-    - patch
-    - watch
-    - update
-
-- apiVersion: rbac.authorization.k8s.io/v1
   kind: RoleBinding
   metadata:
     name: ${NAME}
   roleRef:
     apiGroup: rbac.authorization.k8s.io
-    kind: Role
-    name: ${NAME}
+    kind: ClusterRole
+    name: admin
   subjects:
   - kind: ServiceAccount
     name: ${NAME}
@@ -184,22 +171,51 @@ objects:
 - apiVersion: apps/v1
   kind: Deployment
   metadata:
-    name: ${NAME}
+    name: ${NAME}-operator
   spec:
     selector:
       matchLabels:
         app: ${NAME}
-        component: console
+        component: operator
     replicas: 1
     template:
       metadata:
         labels:
           app: ${NAME}
-          component: console
+          component: operator
       spec:
         serviceAccountName: ${NAME}
         containers:
-        - name: babylon-events-console
+        - name: operator
+          env:
+          - name: BOOKBAG_IMAGESTREAM_NAME
+            value: ${BOOKBAG_IMAGESTREAM_NAME}
+          image: ${OPERATOR_IMAGE}
+          imagePullPolicy: ${OPERATOR_IMAGE_PULL_POLICY}
+          resources:
+            limits:
+              cpu: ${OPERATOR_CPU_LIMIT}
+              memory: ${OPERATOR_MEMORY_LIMIT}
+
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: ${NAME}-ui
+  spec:
+    selector:
+      matchLabels:
+        app: ${NAME}
+        component: ui
+    replicas: 1
+    template:
+      metadata:
+        labels:
+          app: ${NAME}
+          component: ui
+      spec:
+        serviceAccountName: ${NAME}
+        containers:
+        - name: ui
           env:
           - name: ACCESS_PASSWORD
             valueFrom:
@@ -211,8 +227,6 @@ objects:
               secretKeyRef:
                 name: ${NAME}
                 key: admin_password
-          - name: POOLBOY_DOMAIN
-            value: ${POOLBOY_DOMAIN}
           - name: REDIS_PASSWORD
             valueFrom:
               secretKeyRef:
@@ -220,20 +234,20 @@ objects:
                 key: redis_password
           - name: REDIS_SERVER
             value: ${NAME}-redis:6379
-          - name: TEMPLATE_NAME
-            value: ${TEMPLATE_NAME}
-          - name: TEMPLATE_NAMESPACE
-            value: ${TEMPLATE_NAMESPACE}
-          - name: TEMPLATE_PARAMETERS
-            value: ${TEMPLATE_PARAMETERS}
-          image: ${CONSOLE_IMAGE}
-          imagePullPolicy: ${CONSOLE_IMAGE_PULL_POLICY}
+          - name: CATALOG_TEMPLATE_NAME
+            value: ${CATALOG_TEMPLATE_NAME}
+          - name: CATALOG_TEMPLATE_NAMESPACE
+            value: ${CATALOG_TEMPLATE_NAMESPACE}
+          - name: CATALOG_TEMPLATE_PARAMETERS
+            value: ${CATALOG_TEMPLATE_PARAMETERS}
+          image: ${UI_IMAGE}
+          imagePullPolicy: ${UI_IMAGE_PULL_POLICY}
           ports:
           - containerPort: 8080
           resources:
             limits:
-              cpu: ${CONSOLE_CPU_LIMIT}
-              memory: ${CONSOLE_MEMORY_LIMIT}
+              cpu: ${UI_CPU_LIMIT}
+              memory: ${UI_MEMORY_LIMIT}
 
 - apiVersion: apps/v1
   kind: Deployment
@@ -304,7 +318,7 @@ objects:
       targetPort: 8080
     selector:
       app: ${NAME}
-      component: console
+      component: ui
     type: ClusterIP
 
 - apiVersion: v1
