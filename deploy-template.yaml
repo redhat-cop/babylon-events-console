@@ -23,12 +23,14 @@ parameters:
 - name: ACCESS_PASSWORD
   displayName: User Access Password
   description: >-
-    Optional user access password
+    Optional student user access password.
 - name: ADMIN_PASSWORD
   displayName: Administrative Password
   generate: expression
   from: '[a-zA-Z0-9]{8}'
   required: true
+  description: >-
+    Administrative password controls access to manage lab environments.
 - name: BOOKBAG_IMAGESTREAM_NAME
   displayName: Bookbag Image Stream Name
   description: >-
