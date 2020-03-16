@@ -25,9 +25,14 @@ poolboy_domain = os.environ.get('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
 poolboy_version = os.environ.get('POOLBOY_VERSION', 'v1')
 
 bookbag_imagestream_name = os.environ.get('BOOKBAG_IMAGESTREAM_NAME')
-bookbag_imagestream_namespace = os.environ.get('BOOKBAG_IMAGESTREAM_NAMESPACE', namespace)
+bookbag_imagestream_namespace = os.environ.get('BOOKBAG_IMAGESTREAM_NAMESPACE', '')
+if not bookbag_imagestream_namespace:
+    bookbag_imagestream_namespace = namespace
+
 bookbag_template_name = os.environ.get('BOOKBAG_TEMPLATE_NAME', 'bookbag')
-bookbag_template_namespace = os.environ.get('BOOKBAG_TEMPLATE_NAMESPACE', 'openshift')
+bookbag_template_namespace = os.environ.get('BOOKBAG_TEMPLATE_NAMESPACE', '')
+if not bookbag_template_namespace:
+    bookbag_template_namespace = 'openshift'
 
 def get_latest_image_from_bookbag_imagestream():
     bookbag_imagestream = custom_objects_api.get_namespaced_custom_object(

@@ -3,16 +3,15 @@ apiVersion: template.openshift.io/v1
 kind: Template
 metadata:
   annotations:
-    description: babylon events console
-    openshift.io/display-name: Babylon Events Console
+    description: Babylon Events UI
+    openshift.io/display-name: Babylon Events UI
     openshift.io/documentation-url: https://github.com/redhat-cop/babylon-events-console/
     openshift.io/long-description: >-
-      Deploy the Babylon Events Console
-      data is stored on persistent storage.
-  name: babylon-events-console
+      Deploy the Babylon Events UI.
+  name: babylon-events-ui
 
 message: |-
-  The Babylon events console URL may be found in the ${NAME} route resourec.
+  The Babylon events URL may be found in the ${NAME} route resource.
   Admin Password:  ${ADMIN_PASSWORD}
   Access Password: ${ACCESS_PASSWORD}
 
@@ -35,28 +34,38 @@ parameters:
   description: >-
     Image Stream with Bookbag image for lab.
     If provided then bookbag pods will be created automatically.
+    The bookbag image stream should be located in the same namespace as the Babylon events console.
+- name: BOOKBAG_TEMPLATE_NAME
+  displayName: Bookbag Template Name
+  value: bookbag-terminal
+  description: >-
+    Bookbag deployment template. Options include: "bookbag-terminal", "bookbag-split-terminal", and "bookbag-no-terminal"
+- name: BOOKBAG_TEMPLATE_NAMESPACE
+  displayName: Bookbag Template Namespace
+  value: openshift
+  description: >-
+    Bookbag deployment template namespace.
 - name: CATALOG_TEMPLATE_NAME
-  displayName: Template Name
+  displayName: AgnosticV Template Name
   description: >-
     Babylon AgnosticV catalog item template name to provision for users.
-  required: true
+    If not provided then lab environment data must be provided manually.
 - name: CATALOG_TEMPLATE_NAMESPACE
-  displayName: Template Namespace
+  displayName: AgnosticV Template Namespace
   description: >-
     Babylon AgnosticV catalog item template namespace.
   value: openshift
-  required: true
 - name: CATALOG_TEMPLATE_PARAMETERS
-  displayName: Template parameters
+  displayName: AgnosticV Template Parameters
   description: >-
     Parameters to pass to template when creating user lab environments.
     Provide parameters as a JSON or YAML dictionary.
   value: '{}'
-  required: true
 - name: HOSTNAME
   displayName: Route Hostname
   description: >-
     Hostname for events console route.
+    Route hostname will be generated if not provided.
   required: false
 - name: OPERATOR_IMAGE
   displayName: Babylon events console image
