@@ -20,17 +20,16 @@
 </tr>
 {%   for lab_environment in lab_environments %}
 {%     set config_map = lab_environment.config_map %}
-{%     set lab_url = lab_environment.lab_url %}
 <tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
 <td style="padding: 1pt 5pt">{{ loop.index }}</td>
 <td style="padding: 1pt 5pt">
-{% if lab_url %}
-<a href="{{ lab_url }}" target="_blank">{{ config_map.metadata.name }}</a>
+{% if lab_environment.lab_url %}
+<a href="{{ lab_environment.lab_url }}" target="_blank">{{ config_map.metadata.name }}</a>
 {% else %}
 {{ config_map.metadata.name }}
 {% endif %}
 </td>
-<td style="padding: 1pt 5pt">{{ config_map.metadata.labels['beui.gpte.redhat.com/session-id'] | default('unowned', True) }}</td>
+<td style="padding: 1pt 5pt">{{ lab_environment.owner | default('unowned', True) }}</td>
 <td style="padding: 0">
 <form
   method="POST"

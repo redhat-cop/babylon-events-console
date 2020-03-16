@@ -233,6 +233,7 @@ def admin():
 
     lab_environments = [{
         "config_map": config_map,
+        "owner": decode_session_id(config_map.metadata.labels['beui.gpte.redhat.com/session-id']) if config_map.metadata.labels['beui.gpte.redhat.com/session-id'] else '',
         "lab_url": get_lab_url(config_map)
     } for config_map in get_all_lab_config_maps() ]
 
