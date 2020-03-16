@@ -224,7 +224,11 @@ def index():
     else:
         lab_url = None
 
-    return render_template('index.html', lab_data=config_map.data, lab_url=lab_url, session_id=session_id)
+    return render_template('index.html',
+        lab_data = config_map.data if config_map else None,
+        lab_url = lab_url,
+        session_id = session_id
+    )
 
 @app.route('/admin', methods=['GET'])
 def admin():
