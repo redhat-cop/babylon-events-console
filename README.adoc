@@ -65,10 +65,16 @@ oc project ocp4-disconnected-lab
 oc process --local -f build-template.yaml | oc apply -f -
 ------------------------------------------------------------
 
-. Build events console image
+. Build events ui image
 +
 ------------------------------------------------------------
 oc start-build babylon-events-ui --from-dir=. -F
+------------------------------------------------------------
+
+. Build events operator image
++
+------------------------------------------------------------
+oc start-build babylon-events-operator --from-dir=. -F
 ------------------------------------------------------------
 
 . Deploy events console from build image.

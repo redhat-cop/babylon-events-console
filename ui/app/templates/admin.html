@@ -31,17 +31,33 @@
 </td>
 <td style="padding: 1pt 5pt">{{ lab_environment.owner | default('unowned', True) }}</td>
 <td style="padding: 0">
-<form
+<form style="display: inline"
   method="POST"
   action="/admin/unbind/{{ config_map.metadata.name }}"
   onsubmit="return confirm('Confirm unbind {{ config_map.metadata.name }}?')">
 <button type="submit" {% if not config_map.metadata.labels['beui.gpte.redhat.com/session-id'] %}disabled style="color: #777"{% endif %}>Unbind</button>
 </form>
+{%   if catalog_template_name == '' %}
+<form style="display: inline"
+  method="POST"
+  action="/admin/configmap/delete/{{ config_map.metadata.name }}"
+  onsubmit="return confirm('Confirm delete {{ config_map.metadata.name }}?')">
+<button type="submit">Delete</button>
+</form>
+{%   endif %}
 </td>
 </tr>
 {%   endfor %}
 </table>
 
+{%   if catalog_template_name == '' %}
+<h2>Upload Lab Info</h2>
+<p>Upload CSV format, first row will be processed as variable names.</p>
+<form method="POST" action="/admin/upload" enctype="multipart/form-data">
+<input type="file" name="upload">
+<input type="submit">
+</form>
+{%   else %}
 <h2>Provisioned Infrastructure</h2>
 <table>
 <tr>
@@ -51,31 +67,31 @@
 <th style="padding: 1pt 5pt">State</th>
 <th style="padding: 1pt 0">Action</th>
 </tr>
-{%   for resource_claim in resource_claims %}
-{#     So many variables... all to protect jinja evaluation from undefined dictionary keys #}
-{%     set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
-{%     set resource_claim_labels = resource_claim.metadata.labels | default({}) %}
-{%     set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
-{%     set resource_claim_status = resource_claim.status | default({}) %}
-{%     set resource_handle = resource_claim_status.resourceHandle | default({}) %}
-{%     set resource_handle_name = resource_handle.name | default('') %}
+{%     for resource_claim in resource_claims %}
+{#       So many variables... all to protect jinja evaluation from undefined dictionary keys #}
+{%       set resource_claim_annotations = resource_claim.metadata.annotations | default({}) %}
+{%       set resource_claim_labels = resource_claim.metadata.labels | default({}) %}
+{%       set resource_claim_display_name = resource_claim_annotations.displayName | default(resource_claim.metadata.name) %}
+{%       set resource_claim_status = resource_claim.status | default({}) %}
+{%       set resource_handle = resource_claim_status.resourceHandle | default({}) %}
+{%       set resource_handle_name = resource_handle.name | default('') %}
 <tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
 <td style="padding: 1pt 5pt">{{ loop.index }}</td>
 <td style="padding: 1pt 5pt">{{ resource_claim_display_name }}</td>
 <td style="padding: 1pt 5pt">{{ resource_handle_name }}</td>
 <td style="padding: 1pt 5pt">
-{%     if 'resources' in resource_claim_status %}
-{%       for status_resource_item in resource_claim_status.resources | default([]) %}
-{%         set resource_state = status_resource_item.state | default({}) %}
-{%         set resource_state_meta = resource_state.metadata | default({}) %}
-{%         set resource_state_spec = resource_state.spec | default({}) %}
-{%         set resource_vars = resource_state_spec.vars | default({}) %}
-{%         set resource_job_vars = resource_vars.job_vars | default({}) %}
+{%       if 'resources' in resource_claim_status %}
+{%         for status_resource_item in resource_claim_status.resources | default([]) %}
+{%           set resource_state = status_resource_item.state | default({}) %}
+{%           set resource_state_meta = resource_state.metadata | default({}) %}
+{%           set resource_state_spec = resource_state.spec | default({}) %}
+{%           set resource_vars = resource_state_spec.vars | default({}) %}
+{%           set resource_job_vars = resource_vars.job_vars | default({}) %}
 {{ resource_state_meta.name | default('pending') }} {{ resource_vars.current_state | default('UNKNOWN') }}<br>
-{%       endfor %}
-{%     else %}
+{%         endfor %}
+{%       else %}
 UNKNOWN
-{%     endif %}
+{%       endif %}
 </td>
 <td style="padding: 0">
 <form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}" onsubmit="return confirm('Confirm delete {{ resource_claim.metadata.name }}?')">
@@ -83,12 +99,13 @@ UNKNOWN
 </form>
 </td>
 </tr>
-{%   endfor %}
+{%     endfor %}
 </table>
 
 <form method="POST" action="/admin/create">
 <button type="submit">Provision New Environment</button>
 </form>
+{%   endif %}
 
 </div>
 {% endblock %}

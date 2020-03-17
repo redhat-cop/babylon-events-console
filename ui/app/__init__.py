@@ -1,6 +1,8 @@
 """
 This module runs a simple Flask-based front-end to Babylon/Anarchy
 """
+import codecs
+import csv
 import json
 import kubernetes
 import os
@@ -61,51 +63,35 @@ def encode_session_id(session_id):
 def decode_session_id(session_id):
     return b32decode(session_id.replace('z','=')).decode('utf-8')
 
-#def create_resource(resource_definition):
-#    if '/' in resource_definition['apiVersion']:
-#        group, version = resource_definition['apiVersion'].split('/')
-#        namespace = resource_definition['metadata'].get('namespace', namespace)
-#        plural, namespaced = get_api(group, version, resource_definition['kind'])
-#        if namespaced:
-#            return custom_objects_api.create_namespaced_custom_object(
-#                group, version, namespace, plural, resource_definition
-#            )
-#        else:
-#            return custom_objects_api.create_cluster_custom_object(
-#                group, version, plural, resource_definition
-#            )
-#    else:
-#        kind = resource_definition['kind']
-#        namespace = resource_definition['metadata'].get('namespace', namespace)
-#        create_namespaced_method = 'create_namespaced_' + inflection.underscore(kind)
-#        create_cluster_method = 'create_' + inflection.underscore(kind)
-#        if hasattr(core_v1_api, create_namespaced_method):
-#            method = getattr(core_v1_api, create_namespaced_method)
-#            return method(namespace, resource_definition).to_dict()
-#        else:
-#            method = getattr(core_v1_api, create_cluster_method)
-#            return method(resource_definition).to_dict()
+def create_lab_config_map(lab_env):
+    return core_v1_api.create_namespaced_config_map(
+        namespace,
+        kubernetes.client.V1ConfigMap(
+            data = lab_env,
+            metadata = kubernetes.client.V1ObjectMeta(
+                generate_name = 'lab-',
+                labels = {beui_domain + '/session-id': None}
+            )
+        )
+    )
 
-#def get_api(group, version, kind):
-#    if group in api_groups \
-#    and version in api_groups[group]:
-#        for resource in api_groups[group][version]['resources']:
-#            if resource['kind'] == kind:
-#                return resource['name'], resource['namespaced']
-#
-#    resp = core_v1_api.api_client.call_api(
-#        '/apis/{}/{}'.format(group, version), 'GET',
-#        auth_settings=['BearerToken'], response_type='object'
-#    )
-#    group_info = resp[0]
-#    if group not in api_groups:
-#        api_groups[group] = {}
-#    api_groups[group][version] = group_info
-#
-#    for resource in group_info['resources']:
-#        if resource['kind'] == kind:
-#            return resource['name'], resource['namespaced']
-#    raise Exception('Unable to find kind {} in {}/{}'.format(kind, group, version))
+def create_or_update_lab_config_map(name, lab_env):
+    try:
+        config_map = core_v1_api.read_namespaced_config_map(name, namespace)
+        config_map.data = lab_env
+        core_v1_api.replace_namespaced_config_map(config_map.metadata.name, namespace, config_map)
+    except kubernetes.client.rest.ApiException as e:
+        if e.status == 404:
+            core_v1_api.create_namespaced_config_map(
+                namespace,
+                kubernetes.client.V1ConfigMap(
+                    data = lab_env,
+                    metadata = kubernetes.client.V1ObjectMeta(
+                        name = name,
+                        labels = {beui_domain + '/session-id': None}
+                    )
+                )
+            )
 
 def get_lab_url(config_map):
     try:
@@ -266,6 +252,20 @@ def admin_create():
     flash('Lab environment created')
     return redirect(url_for('admin'))
 
+@app.route('/admin/configmap/delete/<name>', methods=['POST'])
+def admin_delete_config_map(name):
+    if not session.get('admin_authenticated'):
+        flash('authentication required')
+        return redirect(url_for('admin'))
+    try:
+        core_v1_api.delete_namespaced_config_map(name, namespace)
+    except ApiException as e:
+        if e.status != 404:
+            raise
+    flash('{0} deleted'.format(name))
+    return redirect(url_for('admin'))
+
+
 @app.route('/admin/delete/<claim_name>', methods=['POST'])
 def admin_delete_resource_claim(claim_name):
     if not session.get('admin_authenticated'):
@@ -314,6 +314,25 @@ def admin_login():
 def admin_logout():
     session['admin_authenticated'] = False
     return redirect(url_for('index'))
+
+@app.route('/admin/upload', methods=['POST'])
+def admin_upload():
+    if not session.get('admin_authenticated'):
+        flash('authentication required')
+        return redirect(url_for('admin'))
+
+    upload = csv.DictReader(codecs.iterdecode(request.files['upload'], 'utf-8'))
+
+    count = 0
+    for lab_env in upload:
+        count += 1
+        if 'guid' in lab_env:
+            create_or_update_lab_config_map('lab-{0}'.format(lab_env['guid']), lab_env)
+        else:
+            create_lab_config_map(lab_env)
+
+    flash('{0} lab environment(s) loaded'.format(count))
+    return redirect(url_for('admin'))
 
 @app.route('/login', methods=['POST'])
 def login():
