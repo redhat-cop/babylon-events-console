@@ -201,6 +201,10 @@ objects:
           env:
           - name: BOOKBAG_IMAGESTREAM_NAME
             value: ${BOOKBAG_IMAGESTREAM_NAME}
+          - name: BOOKBAG_TEMPLATE_NAME
+            value: ${BOOKBAG_TEMPLATE_NAME}
+          - name: BOOKBAG_TEMPLATE_NAMESPACE
+            value: ${BOOKBAG_TEMPLATE_NAMESPACE}
           image: ${OPERATOR_IMAGE}
           imagePullPolicy: ${OPERATOR_IMAGE_PULL_POLICY}
           resources:
