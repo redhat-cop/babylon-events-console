@@ -91,6 +91,8 @@ oc process --local -f deploy-template.yaml \
   -p REDIS_PASSWORD="r3d1sS3cr3t" \
   -p OPERATOR_IMAGE="${OPERATOR_IMAGE}" \
   -p UI_IMAGE="${UI_IMAGE}" \
+  -p LAB_ENV_PREASSIGNMENT="true" \
+  -p LAB_START_TIME="2020-04-23T00:00:00Z" \
 | oc apply -f -
 --------------------------------------------------------------------------------
 +

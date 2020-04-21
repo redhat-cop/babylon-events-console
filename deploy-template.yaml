@@ -136,6 +136,14 @@ parameters:
     Volume space available for session data, e.g. 512Mi, 2Gi.
   required: true
   value: 1Gi
+- name: LAB_ENV_PREASSIGNMENT
+  description: >-
+    Whether lab environments are pre-assigned, disabling dynamic assignment.
+    Value must be "true" or "false"
+  value: 'false'
+- name: LAB_START_TIME
+  description: >-
+    Datetime string in iso8601 format for lab start time.
 
 objects:
 - apiVersion: v1
@@ -255,6 +263,10 @@ objects:
             value: ${CATALOG_TEMPLATE_NAMESPACE}
           - name: CATALOG_TEMPLATE_PARAMETERS
             value: ${CATALOG_TEMPLATE_PARAMETERS}
+          - name: LAB_ENV_PREASSIGNMENT
+            value: ${LAB_ENV_PREASSIGNMENT}
+          - name: LAB_START_TIME
+            value: ${LAB_START_TIME}
           image: ${UI_IMAGE}
           imagePullPolicy: ${UI_IMAGE_PULL_POLICY}
           ports:

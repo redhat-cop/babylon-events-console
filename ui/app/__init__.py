@@ -3,9 +3,12 @@ This module runs a simple Flask-based front-end to Babylon/Anarchy
 """
 import codecs
 import csv
+import datetime
+import dateutil.parser
 import json
 import kubernetes
 import os
+import pytz
 import random
 import redis
 import string
@@ -40,6 +43,9 @@ catalog_template_name = os.getenv('CATALOG_TEMPLATE_NAME', '')
 catalog_template_namespace = os.getenv('CATALOG_TEMPLATE_NAMESPACE', 'openshift')
 catalog_template_parameters = yaml.safe_load(os.getenv('CATALOG_TEMPLATE_PARAMETERS', '{}'))
 catalog_template_quota = int(os.getenv('CATALOG_TEMPLATE_QUOTA', 5))
+lab_env_preassignment = os.getenv('LAB_ENV_PREASSIGNMENT', 'false').lower() in ('true', 'yes')
+lab_start_time = os.getenv('LAB_START_TIME', '')
+lab_start_time = dateutil.parser.parse(lab_start_time) if lab_start_time else None
 poolboy_domain = os.getenv('POOLBOY_DOMAIN', 'poolboy.gpte.redhat.com')
 poolboy_version = os.getenv('POOLBOY_VERSION', 'v1')
 
@@ -194,6 +200,9 @@ def index():
             reset_session()
             return render_template('login.html', password_required=(access_password != ''))
 
+    if lab_start_time and lab_start_time > datetime.datetime.now(tz=pytz.timezone('UTC')):
+        return render_template('lab-not-started.html', lab_start_time=lab_start_time, meta_refresh=30)
+
     # Get lab environment settings
     config_map = get_session_lab_config_map(session_id)
 
@@ -202,6 +211,12 @@ def index():
             # Config map is missing, access reset
             reset_session()
             return redirect(url_for('index'))
+
+        if lab_env_preassignment:
+            flash('Unregistered user {0}. Please try entering your email again if you are registered for this lab.'.format(session_id))
+            reset_session()
+            return redirect(url_for('index'))
+
         config_map = assign_unowned_lab_config_map(session_id)
 
     if config_map:
