@@ -31,6 +31,7 @@
 </td>
 <td style="padding: 1pt 5pt">{{ lab_environment.owner | default('unowned', True) }}</td>
 <td style="padding: 0">
+<button data-toggle="collapse" data-target="#config-{{loop.index}}">Details</button>
 <form style="display: inline"
   method="POST"
   action="/admin/unbind/{{ config_map.metadata.name }}"
@@ -45,6 +46,12 @@
 <button type="submit">Delete</button>
 </form>
 {%   endif %}
+</td>
+</tr>
+<tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
+<td></td>
+<td colspan="3">
+<pre id="config-{{loop.index}}" class="collapse">{{ config_map.data | to_nice_yaml }}</pre>
 </td>
 </tr>
 {%   endfor %}
@@ -77,7 +84,7 @@
 {%       set resource_handle_name = resource_handle.name | default('') %}
 <tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
 <td style="padding: 1pt 5pt">{{ loop.index }}</td>
-<td style="padding: 1pt 5pt">{{ resource_claim_display_name }}</td>
+<td style="padding: 0">{{ resource_claim_display_name }}</td>
 <td style="padding: 1pt 5pt">{{ resource_handle_name }}</td>
 <td style="padding: 1pt 5pt">
 {%       if 'resources' in resource_claim_status %}
@@ -94,9 +101,16 @@ UNKNOWN
 {%       endif %}
 </td>
 <td style="padding: 0">
-<form method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}" onsubmit="return confirm('Confirm delete {{ resource_claim.metadata.name }}?')">
+<button data-toggle="collapse" data-target="#rc-details{{loop.index}}">Details</button>
+<form style="display: inline" method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}" onsubmit="return confirm('Confirm delete {{ resource_claim.metadata.name }}?')">
 <button type="submit">Delete</button>
 </form>
+</td>
+</tr>
+<tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
+<td></td>
+<td colspan="4">
+<pre id="rc-details{{loop.index}}" class="collapse">{{ resource_claim | to_nice_yaml }}</pre>
 </td>
 </tr>
 {%     endfor %}

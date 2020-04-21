@@ -69,6 +69,10 @@ def encode_session_id(session_id):
 def decode_session_id(session_id):
     return b32decode(session_id.replace('z','=')).decode('utf-8')
 
+@app.template_filter()
+def to_nice_yaml(data):
+    return yaml.safe_dump(data, default_flow_style=False)
+
 def create_lab_config_map(lab_env):
     return core_v1_api.create_namespaced_config_map(
         namespace,

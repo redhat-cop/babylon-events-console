@@ -1,0 +1,14 @@
+{% import "bootstrap/utils.html" as util %}
+
+{% include "header.html" %}
+
+{% block content %}
+{% include "topnav.html" %}
+
+<div class="container">
+<h1>Lab Not Started</h1>
+
+<p>This lab begins at {{ lab_start_time.strftime('%F %T %Z') }}
+
+</div>
+{% endblock %}
