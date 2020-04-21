@@ -87,7 +87,19 @@ parameters:
   description: >-
     Operator container memory limit.
   required: true
-  value: 1Gi
+  value: 1500Mi
+- name: OPERATOR_CPU_REQUESTS
+  displayName: Operator CPU Request
+  description: >-
+    Operator container cpu request.
+  required: true
+  value: 100m
+- name: OPERATOR_MEMORY_REQUESTS
+  displayName: Operator Memory Request
+  description: >-
+    Operator container memory request.
+  required: true
+  value: 1500Mi
 - name: UI_IMAGE
   displayName: Babylon events console image
   value: quay.io/redhat-cop/babylon-events-console:latest
@@ -219,6 +231,9 @@ objects:
             limits:
               cpu: ${OPERATOR_CPU_LIMIT}
               memory: ${OPERATOR_MEMORY_LIMIT}
+            requests:
+              cpu: ${OPERATOR_CPU_REQUESTS}
+              memory: ${OPERATOR_MEMORY_REQUESTS}
 
 - apiVersion: apps/v1
   kind: Deployment
