@@ -15,15 +15,96 @@ The following template parameters are used to configure the console:
 |NAME |"babylon-events-console" |
 Name to apply to OpenShift resources (deployment, service, route, etc.).
 
-|TEMPLATE |required |
-Babylon AgnosticV catalog item template given as `<NAMESPACE>//<NAME>`.
-
 |ACCESS_PASSWORD |none |
 Optional access password if event users need to provide an access code to begin a lab.
 
 |ADMIN_PASSWORD  |generated string |
 Administrative password.
 Users with this password may manage lab environments for all users.
+
+|BOOKBAG_IMAGESTREAM_NAME |none |
+Image Stream with Bookbag image for lab.
+If provided then bookbag pods will be created automatically.
+
+|BOOKBAG_IMAGESTREAM_NAMESPACE |none |
+Image Stream namespace for Bookbag image stream.
+If not provided then deployment namespace will be used.
+
+|BOOKBAG_TEMPLATE_NAME |`bookbag` |
+Bookbag deployment template.
+Only used if image stream is provided.
+
+|BOOKBAG_TEMPLATE_NAMESPACE |`openshift` |
+Bookbag deployment template namespace.
+
+|CATALOG_TEMPLATE_NAME |none |
+Babylon AgnosticV catalog item template name to provision for users.
+If not provided then lab environment data must be provided manually.
+
+|CATALOG_TEMPLATE_NAMESPACE |`openshift' |
+Babylon AgnosticV catalog item template namespace.
+
+|CATALOG_TEMPLATE_PARAMETERS |`{}` |
+Parameters to pass to template when creating user lab environments.
+Provide parameters as a JSON or YAML dictionary.
+
+|CATALOG_TEMPLATE_QUOTA |`5` |
+Limit applied to number of catalog items that can be provisioned through the UI.
+
+|HOSTNAME |none |
+Hostname for events ui route.
+Route hostname will be generated if not provided.
+
+|OPERATOR_IMAGE |`quay.io/redhat-cop/babylon-events-console-operator:latest` |
+Image for babylon events operator.
+
+|OPERATOR_IMAGE_PULL_POLICY |`IfNotPresent` |
+
+|OPERATOR_CPU_LIMIT |`500m` |
+Operator container cpu limit.
+
+|OPERATOR_MEMORY_LIMIT |`1500Mi` |
+Operator container memory limit.
+
+|OPERATOR_CPU_REQUESTS |`100m` |
+Operator container cpu request.
+
+|OPERATOR_MEMORY_REQUESTS |`1500Mi` |
+Operator container memory request.
+
+|UI_IMAGE | `quay.io/redhat-cop/babylon-events-console:latest` |
+
+|UI_IMAGE_PULL_POLICY |`IfNotPresent` |
+
+|UI_CPU_LIMIT |`500m` |
+UI container cpu limit.
+
+|UI_MEMORY_LIMIT |`512Mi` |
+UI container memory limit.
+
+|REDIS_IMAGE |`registry.redhat.io/rhscl/redis-32-rhel7:latest` |
+Image for Redis database used for UI session tracking.
+
+|REDIS_PASSWORD |generated string |
+Password for the Redis database.
+Care should be taken to explictly provide the redis password if reapplying template to avoid changing this value.
+
+|REDIS_CPU_LIMIT |`500m` |
+Redis container cpu limit.
+
+|REDIS_MEMORY_LIMIT |`512Mi` |
+Redis container memory limit.
+
+|REDIS_VOLUME_CAPACITY |`1Gi` |
+Volume space available for session data, e.g. 512Mi, 2Gi.
+
+|LAB_ENV_PREASSIGNMENT |`false` |
+Whether lab environments are pre-assigned, disabling dynamic assignment.
+Value must be "true" or "false"
+
+|LAB_START_TIME |none |
+Datetime string in iso8601 format for lab start time.
+
 |=======================
 
 These are the primary parameters for using the template.
@@ -38,6 +119,12 @@ oc process --local -f deploy-template.yaml \
   -p CATALOG_TEMPLATE_NAME="tests.babylon-empty-config.dev" \
   -p ACCESS_PASSWORD="MySecret" \
   -p ADMIN_PASSWORD="AdminSecret" \
+  -p LAB_ENV_PREASSIGNMENT="true" \
+  -p LAB_START_TIME="2020-04-21T00:00:00Z" \
+| oc apply -f -
+--------------------------------------------------------------------------------
++
+NOTE: You should pass `ADMIN_PASSWORD` and `REDIS_PASSWORD` parameters if deploying repeatedly to avoid the auto-generation of values from the template defaults.
 | oc create -f -
 --------------------------------------------------------------------------------
 

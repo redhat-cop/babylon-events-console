@@ -36,17 +36,22 @@ parameters:
   description: >-
     Image Stream with Bookbag image for lab.
     If provided then bookbag pods will be created automatically.
-    The bookbag image stream should be located in the same namespace as the Babylon events console.
+- name: BOOKBAG_IMAGESTREAM_NAMESPACE
+  displayName: Bookbag Image Stream Namespace
+  description: >-
+    Image Stream namespace for Bookbag image stream.
+    If not provided then deployment namespace will be used.
 - name: BOOKBAG_TEMPLATE_NAME
   displayName: Bookbag Template Name
-  value: bookbag-terminal
+  value: bookbag
   description: >-
-    Bookbag deployment template. Options include: "bookbag-terminal", "bookbag-split-terminal", and "bookbag-no-terminal"
+    Bookbag deployment template.
 - name: BOOKBAG_TEMPLATE_NAMESPACE
   displayName: Bookbag Template Namespace
   value: openshift
   description: >-
     Bookbag deployment template namespace.
+    If not provided then "openshift" namespace will be used.
 - name: CATALOG_TEMPLATE_NAME
   displayName: AgnosticV Template Name
   description: >-
@@ -56,6 +61,7 @@ parameters:
   displayName: AgnosticV Template Namespace
   description: >-
     Babylon AgnosticV catalog item template namespace.
+    If not provided then "openshift" namespace will be used.
   value: openshift
 - name: CATALOG_TEMPLATE_PARAMETERS
   displayName: AgnosticV Template Parameters
@@ -63,16 +69,23 @@ parameters:
     Parameters to pass to template when creating user lab environments.
     Provide parameters as a JSON or YAML dictionary.
   value: '{}'
+- name: CATALOG_TEMPLATE_QUOTA
+  displayName: AgnosticV Template Provision Limit
+  description:
+    Limit applied to number of catalog items that can be provisioned through the UI.
+  value: "5"
 - name: HOSTNAME
   displayName: Route Hostname
   description: >-
-    Hostname for events console route.
+    Hostname for events ui route.
     Route hostname will be generated if not provided.
   required: false
 - name: OPERATOR_IMAGE
-  displayName: Babylon events console image
+  displayName: Babylon events operator image
   value: quay.io/redhat-cop/babylon-events-console-operator:latest
   required: true
+  description: >-
+    Image for babylon events operator.
 - name: OPERATOR_IMAGE_PULL_POLICY
   value: IfNotPresent
   required: true
@@ -123,10 +136,13 @@ parameters:
   displayName: Redis Image
   value: registry.redhat.io/rhscl/redis-32-rhel7:latest
   required: true
+  description: >-
+    Image for Redis database used for UI session tracking.
 - name: REDIS_PASSWORD
   displayName: Redis Database Password
   description: >-
     Password for the Redis database.
+    Care should be taken to explictly provide the redis password if reapplying template to avoid changing this value.
   from: '[a-zA-Z0-9]{16}'
   generate: expression
   required: true
@@ -221,6 +237,8 @@ objects:
           env:
           - name: BOOKBAG_IMAGESTREAM_NAME
             value: ${BOOKBAG_IMAGESTREAM_NAME}
+          - name: BOOKBAG_IMAGESTREAM_NAMESPACE
+            value: ${BOOKBAG_IMAGESTREAM_NAMESPACE}
           - name: BOOKBAG_TEMPLATE_NAME
             value: ${BOOKBAG_TEMPLATE_NAME}
           - name: BOOKBAG_TEMPLATE_NAMESPACE
@@ -278,6 +296,8 @@ objects:
             value: ${CATALOG_TEMPLATE_NAMESPACE}
           - name: CATALOG_TEMPLATE_PARAMETERS
             value: ${CATALOG_TEMPLATE_PARAMETERS}
+          - name: CATALOG_TEMPLATE_QUOTA
+            value: ${CATALOG_TEMPLATE_QUOTA}
           - name: LAB_ENV_PREASSIGNMENT
             value: ${LAB_ENV_PREASSIGNMENT}
           - name: LAB_START_TIME
