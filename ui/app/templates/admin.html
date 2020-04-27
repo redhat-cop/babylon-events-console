@@ -125,5 +125,14 @@ UNKNOWN
 {%     endif %}
 {%   endif %}
 
+{%   if lab_env_preassignment %}
+<h2>Assign Lab Environments by Email</h2>
+<p>This merely assigns labs to email addresses for identity. No email will be sent. Paste user email list, one per line.</p>
+<form method="POST" action="/admin/assignlabs">
+<textarea class="form-control" name="emails"></textarea>
+<input type="submit">
+</form>
+{%   endif %}
+
 </div>
 {% endblock %}

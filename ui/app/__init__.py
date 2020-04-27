@@ -289,11 +289,37 @@ def admin():
     resource_claims = get_resource_claims()
     return render_template('admin.html',
         lab_environments=lab_environments,
+        lab_env_preassignment=lab_env_preassignment,
         resource_claims=resource_claims,
         catalog_template_name=catalog_template_name,
         catalog_template_namespace=catalog_template_namespace,
         catalog_template_quota=catalog_template_quota
     )
+
+@app.route('/admin/assignlabs', methods=['POST'])
+def admin_assignlabs():
+    if not session.get('admin_authenticated'):
+        return render_template('admin-login.html')
+
+    emails = request.form.get('emails', '')
+    count = 0
+    unmatched = []
+    for email in emails.splitlines():
+        email = email.strip()
+        if not email:
+            continue
+        lab = assign_unowned_lab_config_map(email)
+        if lab:
+            count += 1
+        else:
+            unmatched.append(email)
+
+    if unmatched:
+        flash('Unable to assign environments for {0}'.format(', '.join(unmatched)))
+    else:
+        flash('Assigned {0} lab environments'.format(count))
+
+    return redirect(url_for('admin'))
 
 @app.route('/admin/create', methods=['POST'])
 def admin_create():
