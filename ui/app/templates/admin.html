@@ -102,9 +102,11 @@ UNKNOWN
 </td>
 <td style="padding: 0">
 <button data-toggle="collapse" data-target="#rc-details{{loop.index}}">Details</button>
+{%       if catalog_template_quota != 0 %}
 <form style="display: inline" method="POST" action="/admin/delete/{{ resource_claim.metadata.name }}" onsubmit="return confirm('Confirm delete {{ resource_claim.metadata.name }}?')">
 <button type="submit">Delete</button>
 </form>
+{%       endif %}
 </td>
 </tr>
 <tr style="background-color: {% if 0 == loop.index % 2 %}#fff{% else %}#ddd{% endif %}">
@@ -116,9 +118,11 @@ UNKNOWN
 {%     endfor %}
 </table>
 
+{%     if catalog_template_quota != 0 %}
 <form method="POST" action="/admin/create">
 <button type="submit">Provision New Environment</button>
 </form>
+{%     endif %}
 {%   endif %}
 
 </div>

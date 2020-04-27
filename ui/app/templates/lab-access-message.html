@@ -4,11 +4,13 @@
 
 {% block content %}
 {% include "topnav.html" %}
-
 <div class="container">
-<h1>Lab Not Started</h1>
 
-<p>This lab begins at {{ lab_start_time.isoformat(sep=' ') }}</p>
+<h3>Lab Access</h3>
+
+<div style="white-space: pre-line">
+{{ msg | safe }}
+</div>
 
 </div>
 {% endblock %}

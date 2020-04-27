@@ -10,12 +10,13 @@ import kubernetes
 import os
 import pytz
 import random
+import re
 import redis
 import string
 import subprocess
 import time
 import yaml
-from base64 import b32encode, b32decode
+from base64 import b32encode, b32decode, b64decode
 from kubernetes.client.rest import ApiException
 from flask import Flask, render_template, flash, redirect, url_for, request, session
 from flask_session import Session
@@ -234,6 +235,45 @@ def index():
         lab_url = lab_url,
         session_id = session_id
     )
+
+@app.route('/l/<b64_session_id>', methods=['GET'])
+def lab_access(b64_session_id):
+    '''
+    Direct lab access link.
+    '''
+    if access_password \
+    and not session.get('access_authenticated') \
+    and not session.get('admin_authenticated'):
+        flask.abort(403)
+
+    if lab_start_time and lab_start_time > datetime.datetime.now(tz=pytz.timezone('UTC')):
+        return render_template('lab-not-started.html', lab_start_time=lab_start_time, meta_refresh=30)
+
+    # Get lab environment settings
+    config_map = None
+    try:
+        session_id = b64decode(b64_session_id).decode('utf-8')
+        config_map = get_session_lab_config_map(session_id)
+    except:
+        pass
+
+    if not config_map:
+        return render_template('invalid-direct-link.html'), 404
+
+    lab_url = get_lab_url(config_map)
+    if lab_url:
+        return redirect(lab_url)
+
+    msg = config_map.data.get('msg')
+    if msg:
+        msg = re.sub(r'(https?://[^\s]*[\w/])', r'<a href="\1">\1</a>', msg)
+        return render_template('lab-access-message.html', msg=msg)
+    else:
+        return render_template('index.html',
+            lab_data = config_map.data,
+            lab_url = lab_url,
+            session_id = session_id
+        )
 
 @app.route('/admin', methods=['GET'])
 def admin():

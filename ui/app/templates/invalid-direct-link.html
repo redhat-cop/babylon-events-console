@@ -1,0 +1,17 @@
+{% import "bootstrap/utils.html" as util %}
+
+{% include "header.html" %}
+
+{% block content %}
+{% include "topnav.html" %}
+
+<div class="container">
+<h1>Invalid lab link</h1>
+
+<p>
+Sorry, this lab link is invalid or expired or perhaps your lab environment is still provisioning.
+Please check your lab start time and try again later.
+</p>
+
+</div>
+{% endblock %}
