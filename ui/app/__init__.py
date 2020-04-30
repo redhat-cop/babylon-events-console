@@ -236,10 +236,7 @@ def index():
         return redirect(lab_url)
 
     if not config_map:
-        return render_template('index.html',
-            lab_data = None,
-            session_id = session_id
-        )
+        return render_template('no-lab-available.html', session_id = session_id)
 
     msg = config_map.data.get('msg')
     if msg:

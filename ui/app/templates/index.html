@@ -8,11 +8,10 @@
 
 {{ util.flashed_messages(dismissible=True) }}
 
-{%   if lab_data %}
 <h3>Lab Environment</h3>
 <table>
-{%     for k, v in lab_data.items() %}
-{%       if k not in ['user_info_messages'] %}
+{%   for k, v in lab_data.items() %}
+{%     if k not in ['user_info_messages'] %}
 <tr>
 <th style="padding: 1pt 5pt">{{ k }}</th>
 <td style="padding: 1pt 5pt">{{ v }}</td>
@@ -21,14 +20,11 @@
 {%     endfor %}
 </table>
 
-{%     if 'user_info_messages' in lab_data %}
+{%   if 'user_info_messages' in lab_data %}
 <h4>Messages:</h4>
 <p style="white-space: pre-line">{{ lab_data.user_info_messages }}</p>
-{%     endif %}
-</p>
-{%   else %}
-<p>No lab environment available.</p>
 {%   endif %}
+</p>
 
 {%   for resource_claim in resource_claims %}
 <div class="container">
