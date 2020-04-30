@@ -58,6 +58,8 @@ bootstrap = Bootstrap(app)
 SECRET_KEY = random_string(32)
 SESSION_TYPE = 'redis'
 SESSION_REDIS = redis.from_url('redis://:{0}@{1}'.format(os.getenv('REDIS_PASSWORD'), os.getenv('REDIS_SERVER')))
+SESSION_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
 app.config.from_object(__name__)
 Session(app)
 
@@ -230,9 +232,16 @@ def index():
     else:
         lab_url = None
 
+    if lab_url:
+        return redirect(lab_url)
+
+    msg = config_map.data.get('msg')
+    if msg:
+        msg = re.sub(r'(https?://[^\s]*[\w/])', r'<a href="\1">\1</a>', msg)
+        return render_template('lab-access-message.html', msg=msg)
+
     return render_template('index.html',
         lab_data = config_map.data if config_map else None,
-        lab_url = lab_url,
         session_id = session_id
     )
 

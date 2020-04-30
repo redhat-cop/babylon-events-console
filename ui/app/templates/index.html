@@ -6,12 +6,7 @@
 {% include "topnav.html" %}
 <div class="container">
 
-{{util.flashed_messages(dismissible=True)}}
-
-{%   if lab_url %}
-<h3>Lab Interface:</h2>
-<p><a href="{{ lab_url }}" target="_blank">{{ lab_url }}</a></p>
-{%   endif %}
+{{ util.flashed_messages(dismissible=True) }}
 
 {%   if lab_data %}
 <h3>Lab Environment</h3>
