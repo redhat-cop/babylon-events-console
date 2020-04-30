@@ -235,13 +235,19 @@ def index():
     if lab_url:
         return redirect(lab_url)
 
+    if not config_map:
+        return render_template('index.html',
+            lab_data = None,
+            session_id = session_id
+        )
+
     msg = config_map.data.get('msg')
     if msg:
         msg = re.sub(r'(https?://[^\s]*[\w/])', r'<a href="\1">\1</a>', msg)
         return render_template('lab-access-message.html', msg=msg)
 
     return render_template('index.html',
-        lab_data = config_map.data if config_map else None,
+        lab_data = config_map.data,
         session_id = session_id
     )
 

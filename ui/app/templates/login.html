@@ -11,10 +11,10 @@
 {{util.flashed_messages(dismissible=True)}}
 
 {%   if login_failed | default(False) %}
-<p>Login failed!</p>
+<p style="color: red">Login failed!</p>
 {%   endif %}
 {%   if invalid_session_id | default(False) %}
-<p>Invalid session id.</p>
+<p style="color: red">Invalid session id.</p>
 {%   endif %}
 <form method="POST" action="/login">
 <p>User ID: <input name="id" type="email" value="{{ session_id | default('') | escape }}" required></p>
