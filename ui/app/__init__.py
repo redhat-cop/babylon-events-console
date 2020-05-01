@@ -17,6 +17,7 @@ import subprocess
 import time
 import yaml
 from base64 import b32encode, b32decode, b64decode
+from ipaddress import ip_address, ip_network
 from kubernetes.client.rest import ApiException
 from flask import Flask, render_template, flash, redirect, url_for, request, session
 from flask_session import Session
@@ -34,7 +35,14 @@ def random_string(length):
     return ''.join([random.choice(string.ascii_letters + string.digits) for n in range(length)])
 
 access_password = os.getenv('ACCESS_PASSWORD', '')
+access_ip_networks = os.getenv('ACCESS_IP_NETWORKS', '')
 admin_password = os.getenv('ADMIN_PASSWORD', random_string(32))
+
+if access_ip_networks:
+    access_ip_networks = [ ip_network(s) for s in access_ip_networks.split(',') ]
+else:
+    access_ip_networks = None
+
 
 core_v1_api = kubernetes.client.CoreV1Api()
 custom_objects_api = kubernetes.client.CustomObjectsApi()
@@ -437,6 +445,16 @@ def login():
 
     if len(session_id) < 6:
         return render_template('login.html', session_id=session_id, invalid_session_id=True, password_required=(access_password != ''))
+
+    if access_ip_networks:
+        ip_addr = ip_address(request.remote_addr)
+        ip_allow = False
+        for network in access_ip_networks:
+            if ip_addr in network:
+                ip_allow = True
+                break
+        if not ip_allow:
+            return render_template('ip-blocked.html'), 403
 
     if access_password:
         if access_password == request.form.get('password'):

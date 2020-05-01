@@ -24,6 +24,10 @@ parameters:
   displayName: User Access Password
   description: >-
     Optional student user access password.
+- name: ACCESS_IP_NETWORKS
+  displayName: Permitted Networks
+  description: >-
+    List of permitted networks in comma separated CIDR notation.
 - name: ADMIN_PASSWORD
   displayName: Administrative Password
   generate: expression
@@ -278,6 +282,8 @@ objects:
               secretKeyRef:
                 name: ${NAME}
                 key: access_password
+          - name: ACCESS_IP_NETWORKS
+            value: ${ACCESS_IP_NETWORKS}
           - name: ADMIN_PASSWORD
             valueFrom:
               secretKeyRef:

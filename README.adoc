@@ -18,6 +18,9 @@ Name to apply to OpenShift resources (deployment, service, route, etc.).
 |ACCESS_PASSWORD |none |
 Optional access password if event users need to provide an access code to begin a lab.
 
+|ACCESS_IP_NETWORKS |none |
+Optional comma separated list of permitted IP networks in CIDR format.
+
 |ADMIN_PASSWORD  |generated string |
 Administrative password.
 Users with this password may manage lab environments for all users.
