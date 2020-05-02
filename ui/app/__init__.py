@@ -429,7 +429,9 @@ def admin_upload():
     upload = csv.DictReader(codecs.iterdecode(request.files['upload'], 'utf-8'))
 
     count = 0
-    for lab_env in upload:
+    for row in upload:
+        # Really annoying, I can't get csv dict reader to properly process newlines!
+        lab_env = { k: v.replace("\\n", "\n") for k, v in row.items() }
         count += 1
         if 'guid' in lab_env:
             create_or_update_lab_config_map('lab-{0}'.format(lab_env['guid']), lab_env)
