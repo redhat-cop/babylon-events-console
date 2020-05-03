@@ -115,6 +115,8 @@ def create_or_update_lab_config_map(name, lab_env):
             )
 
 def get_lab_url(config_map):
+    if 'lab_url' in config_map.data:
+        return config_map.data['lab_url']
     try:
         route = custom_objects_api.get_namespaced_custom_object(
             'route.openshift.io', 'v1', namespace, 'routes', config_map.metadata.name
@@ -291,7 +293,6 @@ def lab_access(b64_session_id):
     else:
         return render_template('index.html',
             lab_data = config_map.data,
-            lab_url = lab_url,
             session_id = session_id
         )
 

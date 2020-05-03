@@ -40,11 +40,6 @@
 <p>{{ resource_claim_description }}</p>
 {%     endif %}
 
-{%     if lab_urls[loop.index0] %}
-<h3>Bookbag Lab Interface:</h2>
-<p><a href="{{ lab_urls[loop.index0] }}" target="_blank">{{ lab_urls[loop.index0] }}</a></p>
-{%     endif %}
-
 {%     for resource in resource_claim.spec.resources %}
 {%       set resource_status = resource_claim_status_resources[loop.index0] | default({}) %}
 {%       set resource_state = resource_status.state | default({}) %}
