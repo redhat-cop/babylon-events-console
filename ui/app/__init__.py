@@ -74,7 +74,7 @@ Session(app)
 api_groups = {}
 
 def encode_session_id(session_id):
-    return b32encode(session_id.encode('utf-8')).decode('ascii').replace('=','z')
+    return b32encode(session_id[:35].encode('utf-8')).decode('ascii').replace('=','z')
 
 @app.template_filter()
 def decode_session_id(session_id):
