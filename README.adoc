@@ -128,8 +128,6 @@ oc process --local -f deploy-template.yaml \
 --------------------------------------------------------------------------------
 +
 NOTE: You should pass `ADMIN_PASSWORD` and `REDIS_PASSWORD` parameters if deploying repeatedly to avoid the auto-generation of values from the template defaults.
-| oc create -f -
---------------------------------------------------------------------------------
 
 Once deployed, get the route hostname for the lab console.
 The same hostname should be provided to each student.
