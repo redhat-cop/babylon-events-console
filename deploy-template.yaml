@@ -86,7 +86,7 @@ parameters:
   required: false
 - name: OPERATOR_IMAGE
   displayName: Babylon events operator image
-  value: quay.io/redhat-cop/babylon-events-console-operator:v0.5.5
+  value: quay.io/redhat-cop/babylon-events-console-operator:v0.5.6
   required: true
   description: >-
     Image for babylon events operator.
@@ -119,7 +119,7 @@ parameters:
   value: 1500Mi
 - name: UI_IMAGE
   displayName: Babylon events console image
-  value: quay.io/redhat-cop/babylon-events-console:v0.5.5
+  value: quay.io/redhat-cop/babylon-events-console:v0.5.6
   required: true
 - name: UI_IMAGE_PULL_POLICY
   value: IfNotPresent
