@@ -177,7 +177,7 @@ def watch_resource_claims(event, logger, **_):
     else:
         logger.warning('Unhandled ResourceClaim event %s', event)
 
-@kopf.on.event('', 'v1', 'configmaps', labels={beui_domain + '/session-id': None})
+@kopf.on.event('', 'v1', 'configmaps', labels={beui_domain + '/session-id': kopf.PRESENT})
 def watch_config_maps(event, logger, **_):
     '''
     Watch ConfigMaps and manage bookbag interfaces.
