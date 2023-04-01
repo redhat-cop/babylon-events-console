@@ -16,7 +16,7 @@ jobs:
       id: get_version
       run: echo ::set-output name=VERSION::${GITHUB_REF#refs/tags/}
     - name: Build and publish console ui image to Quay
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-Github-Action@v5
       with:
         name: redhat-cop/babylon-events-console
         username: ${{ secrets.QUAY_USERNAME }}
@@ -26,7 +26,7 @@ jobs:
         workdir: ui
         tags: ${{ steps.get_version.outputs.VERSION }},latest
     - name: Build and publish console operator image to Quay
-      uses: elgohr/Publish-Docker-Github-Action@master
+      uses: elgohr/Publish-Docker-Github-Action@v5
       with:
         name: redhat-cop/babylon-events-console-operator
         username: ${{ secrets.QUAY_USERNAME }}
